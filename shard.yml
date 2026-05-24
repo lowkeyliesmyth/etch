@@ -1,0 +1,9 @@
+name: etch
+version: 0.1.0
+
+authors:
+  - lowkey <lowkey@kaffeinlabs.com>
+
+crystal: '>= 1.20.1'
+
+license: MIT
