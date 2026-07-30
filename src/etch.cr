@@ -1,6 +1,7 @@
-# TODO: Write documentation for `Etch`
-module Etch
-  VERSION = "0.1.0"
+require "./etch/*"
 
-  # TODO: Put your code here
+module Etch
+  VERSION    = {{ `shards version #{__DIR__}/..`.stringify.chomp }}
+  BUILD_DATE = {{ `date +%F`.stringify.chomp }}
+  BUILD_HASH = {{ `git rev-parse HEAD`.stringify[0...8] }}
 end
