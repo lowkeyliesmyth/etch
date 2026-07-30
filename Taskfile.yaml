@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
-version: '3'
+version: "3"
 
 tasks:
   spec:
     desc: Run Crystal specs
     cmds:
-      - crystal spec
+      - crystal spec --order random
 
   lint:
     desc: Run Ameba linter
@@ -21,6 +21,11 @@ tasks:
     desc: Lint GitHub Actions workflows
     cmds:
       - actionlint
+
+  docs:
+    desc: Generates API usage docs from inline docstrings
+    cmds:
+      - crystal docs
 
   default:
     desc: Run default spec-lint checks

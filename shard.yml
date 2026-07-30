@@ -1,9 +1,23 @@
 name: etch
-version: 0.1.0
+version: 0.0.1
+
+description: |
+  A minimal, leveled, structured, human-readable logger. Pretty. Little. Crystal Logs.
+
+dependencies:
+  sheen:
+    github: lowkeyliesmyth/sheen
+    version: ~> 0.1.0
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    #version: ~> 1.7.0-dev
+    version: ~> 1.6.4
 
 authors:
   - lowkey <lowkey@kaffeinlabs.com>
 
-crystal: '>= 1.20.1'
+crystal: ">= 1.20.1"
 
 license: MIT
