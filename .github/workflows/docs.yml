@@ -47,7 +47,7 @@ jobs:
         run: shards install --without-development
 
       - name: Build API docs
-        run: crystal docs --canonical-base-url=https://lowkeyliesmyth.github.io/sheen/
+        run: crystal docs --canonical-base-url=https://lowkeyliesmyth.github.io/etch/
 
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
