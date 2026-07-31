@@ -1,0 +1,64 @@
+codecov:
+  # Only post coverage results once the rest of GHA have finished, so partial coverage reports don't show up while jobs are still running.
+  require_ci_to_pass: true
+
+  notify:
+    # Wait for CI to finish before sending PR comments.
+    wait_for_ci: true
+
+# Coverage aggregation and status-gate rules.
+coverage:
+  # Round coverage percentages to two decimal places.
+  precision: 2
+
+  # Round coverage *down*
+  round: down
+
+  # Color scale for the badge and UI. Red below 70%, green above 100%.
+  range: "70...100"
+
+  status:
+    # Project status: compares the whole codebase coverage after the PR to the base branch.
+    # "auto" uses the base commit as the target.
+    # 1% threshold allows small coverage drift without failing the check.
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        if_ci_failed: error
+        removed_code_behavior: adjust_base
+        paths:
+          - "src"
+
+    # Patch status: compares only the lines changed in the PR. Percentage of new/changed lines that should be covered by tests.
+    patch:
+      default:
+        target: 70%
+        threshold: 1%
+
+# PR comment config
+comment:
+  # Sections shown in the comment: how much reachable code is covered, the diff coverage, any flags, and per-file coverage.
+  layout: "reach,diff,flags,files"
+
+  # Keep the default "post a new comment, update it on new commits" behavior.
+  behavior: default
+
+  # No comment if the coverage numbers don't change.
+  require_changes: true
+
+  # Allow comments even if no base coverage exists yet (eg first PR).
+  require_base: false
+
+  # Always require a valid head report before commenting.
+  require_head: true
+
+  # Show the overall project coverage summary in the comment.
+  hide_project_coverage: false
+
+ignore:
+  - "spec/**/*"
+  - "docs/**/*"
+  - "lib/**/*"
+  - "bin/**/*"
+  - "all_specs.cr"
