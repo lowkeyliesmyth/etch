@@ -17,8 +17,8 @@ describe Etch::TimeFormat do
     time.to_s(Etch::TimeFormat::RFC3339).should eq("2019-07-05T13:04:05-07:00")
   end
 
-  it "RFC3399_NANO contains a fixed nine digits of fractional seconds" do
-    time.to_s(Etch::TimeFormat::RFC3399_NANO).should eq("2019-07-05T13:04:05.000000000-07:00")
+  it "RFC3339_NANO contains a fixed nine digits of fractional seconds" do
+    time.to_s(Etch::TimeFormat::RFC3339_NANO).should eq("2019-07-05T13:04:05.000000000-07:00")
   end
 
   it "STAMP renders short month, blank-padded day, and time" do

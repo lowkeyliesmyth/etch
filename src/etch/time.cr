@@ -10,8 +10,8 @@ module Etch
     # RFC3339 with timezone offset. eg "2019-07-05T13:04:05-07:00"
     RFC3339 = "%Y-%m-%dT%H:%M:%S%:z"
 
-    # RFC339 with fixed nine-digit fractional seconds
-    RFC3399_NANO = "%Y-%m-%dT%H:%M:%S.%N%:z"
+    # RFC3339 with fixed nine-digit fractional seconds
+    RFC3339_NANO = "%Y-%m-%dT%H:%M:%S.%N%:z"
 
     # Timestamp without date or zone. eg "Jul 5 13:04:05"
     STAMP = "%b %e %H:%M:%S"
