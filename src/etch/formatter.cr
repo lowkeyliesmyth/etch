@@ -7,7 +7,7 @@ module Etch
     Logfmt
   end
 
-  # Output key names, exposed as mutable global defaults that callers can rename the keys at runtime in override configurations.
+  # Output key names.
   TIMESTAMP_KEY = "time"
   MESSAGE_KEY   = "msg"
   LEVEL_KEY     = "level"
