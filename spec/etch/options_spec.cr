@@ -9,7 +9,6 @@ describe Etch::Options do
     opt.report_timestamp?.should be_false
     opt.report_caller?.should be_false
     opt.prefix.should eq("")
-    opt.caller_offset.should eq(0)
     opt.caller_formatter.should be_nil
     opt.fields.should be_empty
   end

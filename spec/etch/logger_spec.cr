@@ -10,7 +10,6 @@ describe Etch::Logger do
     log.report_timestamp?.should be_false
     log.report_caller?.should be_false
     log.caller_formatter.should be_nil
-    log.caller_offset.should eq(0)
     log.prefix.should eq("")
     log.fields.should be_empty
   end

@@ -32,7 +32,6 @@ module Etch
     property? report_timestamp : Bool
     property? report_caller : Bool
     property caller_formatter : CallerFormatter?
-    property caller_offset : Int32
     property fields : Fields
     property formatter : Formatter
 
@@ -44,7 +43,6 @@ module Etch
       @report_timestamp : Bool = false,
       @report_caller : Bool = false,
       @caller_formatter : CallerFormatter? = nil,
-      @caller_offset : Int32 = 0,
       @fields : Fields = Fields.new,
       @formatter : Formatter = Formatter::Text,
     )
