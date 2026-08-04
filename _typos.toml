@@ -1,0 +1,4 @@
+[default.extend-words]
+# Intentionally split words during testing
+ERRO = "ERRO"
+

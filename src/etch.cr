@@ -5,13 +5,10 @@ module Etch
   BUILD_DATE = {{ `date +%F`.stringify.chomp }}
   BUILD_HASH = {{ `git rev-parse HEAD`.stringify[0...8] }}
 
-  # Raised after a fatal record is logged.
-  # Carries the optional message and the fatal record's fields
-  class FatalError < Exception
-    getter fields : Array(Tuple(String, String))
-
-    def initialize(message : String? = nil, @fields : Array(Tuple(String, String)) = [] of Tuple(String, String))
-      super(message)
-    end
+  # Runs *block*, rescuing `FatalError` and exiting the process with status 1. So fatal terminates the program without etch directly calling `exit`.
+  def self.run(&) : Nil
+    yield
+  rescue FatalError
+    exit 1
   end
 end

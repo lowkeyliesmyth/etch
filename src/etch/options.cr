@@ -1,6 +1,7 @@
 require "./level"
 require "./formatter"
 require "./time"
+require "./value"
 
 module Etch
   # Applied to each log timestamp before formatting to allow customizing timestamp transformation.
@@ -17,7 +18,7 @@ module Etch
     short = segments.size <= 2 ? file : segments.last(2).join('/')
     "#{short}:#{line}"
   end
-
+  # Returns the entire path of *file* joined to *line*.
   LONG_CALLER_FORMATTER = CallerFormatter.new do |file, line, _fn|
     "#{file}:#{line}"
   end
@@ -32,7 +33,7 @@ module Etch
     property? report_caller : Bool
     property caller_formatter : CallerFormatter?
     property caller_offset : Int32
-    property fields : Array(Tuple(String, String))
+    property fields : Fields
     property formatter : Formatter
 
     def initialize(
@@ -44,7 +45,7 @@ module Etch
       @report_caller : Bool = false,
       @caller_formatter : CallerFormatter? = nil,
       @caller_offset : Int32 = 0,
-      @fields : Array(Tuple(String, String)) = [] of Tuple(String, String),
+      @fields : Fields = Fields.new,
       @formatter : Formatter = Formatter::Text,
     )
     end

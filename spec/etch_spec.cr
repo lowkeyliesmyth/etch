@@ -2,7 +2,7 @@ require "./spec_helper"
 
 describe Etch::FatalError do
   it "carries an optional message and fields" do
-    err = Etch::FatalError.new("boom", [{"k", "v"}])
+    err = Etch::FatalError.new("boom", Etch::Fields{ {"k", "v"} })
     err.message.should eq("boom")
     err.fields.should eq([{"k", "v"}])
   end
