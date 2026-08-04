@@ -1,6 +1,8 @@
+require "./level"
+
 module Etch
   # The set of types a field value is allowed to hold.
-  alias Value = Nil | Bool | Int64 | Float64 | String | Time | Exception
+  alias Value = Nil | Bool | Int64 | Float64 | String | Time | Exception | Level
 
   # An ordered list of k-v pairs. Order is significant and duplicate keys are allowed.
   alias Fields = Array(Tuple(String, Value))

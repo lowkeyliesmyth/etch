@@ -153,6 +153,62 @@ describe Etch::Logger do
     end
   end
 
+  describe "#emit" do
+    it "stamps with the injected timestamp instead of the local system clock" do
+      frozen = Time.utc(2021, 7, 5, 13, 4, 5)
+      io = IO::Memory.new
+      log = Etch::Logger.new(io, report_timestamp: true)
+      log.emit(Etch::Level::Info, "backdated", timestamp: frozen)
+      io.to_s.should eq("2021/07/05 13:04:05 INFO backdated\n")
+    end
+
+    it "applies time_function to consistently mutate an injected timestamp" do
+      taken = Time.utc(2021, 7, 5, 13, 4, 5)
+      io = IO::Memory.new
+      log = Etch::Logger.new(io, report_timestamp: true, time_function: ->(t : Time) { t + 1.hour })
+      log.emit(Etch::Level::Info, "shifted", timestamp: taken)
+      io.to_s.should eq("2021/07/05 14:04:05 INFO shifted\n")
+    end
+
+    it "reports a fatal record without raising" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.emit(Etch::Level::Fatal, "reported but not raised")
+      io.to_s.should eq("FATA reported but not raised\n")
+    end
+
+    it "respects level filtering" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io, level: :error)
+      log.emit(Etch::Level::Info, "negative")
+      io.to_s.should be_empty
+    end
+  end
+
+  describe "empty messages" do
+    it "omits the message key when the message is empty" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.info ""
+      io.to_s.should eq("INFO\n")
+    end
+
+    it "omits the message key when the message is nil" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.info nil, batch: 2
+      io.to_s.should eq("INFO batch=2\n")
+    end
+
+    it "keeps a whitespace only message" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.info " "
+      # We expect this to be two spaces: a " " separator and the actual " " message content
+      io.to_s.should eq("INFO#{" " * 2}\n")
+    end
+  end
+
   describe "timestamp and prefix" do
     it "renders the timestamp first and prefix before the message" do
       frozen = Time.local(2021, 7, 5, 13, 4, 5, location: Time::Location.fixed("here", -7 * 3600))

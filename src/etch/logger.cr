@@ -58,12 +58,28 @@ module Etch
       copy_with(prefix: prefix, fields: @fields.dup)
     end
 
+    # Emits a log event.
+    #
+    # Optionally accepts *timestamp* from caller. Default nil *timestamp* vends an event write timestamp of now.
+    def emit(
+      level : Level,
+      msg,
+      fields : Fields = Fields.new,
+      *,
+      timestamp : Time? = nil,
+      file : String = __FILE__,
+      line : Int32 = __LINE__,
+    ) : Nil
+      return unless enabled?(level)
+      handle(level, msg, fields, timestamp, file, line)
+    end
+
     # Emits *msg* at *level* with the given *kv* fields.
     #
     # Omits *msg* when *level* is filtered out by `#level`.
     def log(level : Level, msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
       return unless enabled?(level)
-      handle(level, msg, to_fields(kv), __file, __line)
+      emit(level, msg, to_fields(kv), file: __file, line: __line)
     end
 
     # Emits specifically formatted `sprintf(format, *args)` at *level*.
@@ -71,7 +87,7 @@ module Etch
     # Omits when *level* is filtered out by `#level`
     def logf(level : Level, format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
       return unless enabled?(level)
-      handle(level, sprintf(format, *args), Fields.new, __file, __line)
+      emit(level, sprintf(format, *args), Fields.new, file: __file, line: __line)
     end
 
     # Generate the same group of methods for the four non-fatal standard levels.
@@ -79,7 +95,7 @@ module Etch
       # Emits *msg* at the {{name.id}} level with the given *kv* fields.
       def {{name.id}}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
         return unless enabled?(Level::{{level.id}})
-        handle(Level::{{level.id}}, msg, to_fields(kv), __file, __line)
+        emit(Level::{{level.id}}, msg, to_fields(kv), file: __file, line: __line)
       end
 
       # Emits the blocks value at the {{name.id}} level with the given *kv* fields.
@@ -87,13 +103,13 @@ module Etch
       # Block is evaluated only when the level is enabled.
       def {{name.id}}(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
         return unless enabled?(Level::{{level.id}})
-        handle(Level::{{level.id}}, yield, to_fields(kv), __file, __line,)
+        emit(Level::{{level.id}}, yield, to_fields(kv), file: __file, line: __line)
       end
 
       # Emits specifically formatted `sprintf(format, *args)` at the {{name.id}} level
       def {{name.id}}f(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
         return unless enabled?(Level::{{level.id}})
-        handle(Level::{{level.id}}, sprintf(format, *args), Fields.new, __file, __line)
+        emit(Level::{{level.id}}, sprintf(format, *args), Fields.new, file: __file, line: __line)
       end
     {% end %}
 
@@ -114,37 +130,35 @@ module Etch
 
     # Emits *msg* with no level label, ignoring any configured level.
     def print(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
-      handle(Level::None, msg, to_fields(kv), __file, __line)
+      emit(Level::None, msg, to_fields(kv), file: __file, line: __line)
     end
 
     # Emits the block's value with no level label, ignoring any configured level.
     def print(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
-      handle(Level::None, yield, to_fields(kv), __file, __line)
+      emit(Level::None, yield, to_fields(kv), file: __file, line: __line)
     end
 
     # Emits specifically formatted `sprintf(format, *args)` with no level label, ignoring any configured level.
     def printf(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
-      handle(Level::None, sprintf(format, *args), Fields.new, __file, __line)
+      emit(Level::None, sprintf(format, *args), Fields.new, file: __file, line: __line)
     end
 
     # Emits a fatal event only if fatal is enabled.
     #
     # Always raises.
     private def emit_fatal(msg, fields : Fields, file : String, line : Int32) : NoReturn
-      handle(Level::Fatal, msg, fields, file, line) if enabled?(Level::Fatal)
+      emit(Level::Fatal, msg, fields, file: file, line: line) if enabled?(Level::Fatal)
       raise FatalError.new(msg.to_s, fields)
     end
 
     # Assembles the Logger k-v list in structured order, renders it, and writes it out in a concurrency-safe way.
-    private def handle(level : Level, msg, call_fields : Fields, file : String, line : Int32) : Nil
+    #
+    # Stores raw `Time` and `Level` values for the formatter to appropriately.
+    private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
       kvs = Fields.new
 
-      if @report_timestamp
-        stamp = @time_function.call(Time.local).to_s(@time_format)
-        kvs << {TIMESTAMP_KEY, stamp.as(Value)}
-      end
-
-      kvs << {LEVEL_KEY, level.to_s.as(Value)} unless level.none?
+      kvs << {TIMESTAMP_KEY, @time_function.call(timestamp || Time.local).as(Value)} if @report_timestamp
+      kvs << {LEVEL_KEY, level.as(Value)} unless level.none?
 
       if @report_caller
         formatter = @caller_formatter || SHORT_CALLER_FORMATTER
@@ -152,7 +166,7 @@ module Etch
       end
 
       kvs << {PREFIX_KEY, @prefix.as(Value)} unless @prefix.empty?
-      kvs << {MESSAGE_KEY, msg.to_s.as(Value)}
+      kvs << {MESSAGE_KEY, msg.to_s.as(Value)} unless msg.to_s.empty?
       kvs.concat(@fields)
       kvs.concat(call_fields)
 
@@ -166,20 +180,24 @@ module Etch
     # Renders *kvs* as a single unstyled text line.
     #
     # TODO: Simple now. Fully featured implementation later.
-    private def render(kvs : Fields) : String
+    private def render(kvs : Fields) : String # ameba:disable Metrics/CyclomaticComplexity
       String.build do |io|
         rest = Fields.new
         leading = false
 
         kvs.each do |(key, value)|
           case key
-          when TIMESTAMP_KEY, CALLER_KEY
+          when TIMESTAMP_KEY
+            io << ' ' if leading
+            io << value.as(Time).to_s(@time_format)
+            leading = true
+          when CALLER_KEY
             io << ' ' if leading
             io << value
             leading = true
           when LEVEL_KEY
             io << ' ' if leading
-            io << level_label(value.to_s)
+            io << level_label(value.as(Level))
             leading = true
           when PREFIX_KEY
             io << ' ' if leading
@@ -199,8 +217,8 @@ module Etch
     end
 
     # Returns the log entry's 4-char uppercase level label (eg "INFO")
-    private def level_label(name : String) : String
-      name.upcase[0, 4]
+    private def level_label(level : Level) : String
+      level.to_s.upcase[0, 4]
     end
 
     # Converts the callsite named-tuple *kv* into `Fields`. Each value is coerced into a valid Value type.
