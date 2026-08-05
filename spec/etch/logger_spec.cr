@@ -307,6 +307,45 @@ describe Etch::Logger do
     end
   end
 
+  describe "runtime keyed fields" do
+    it "accepts a hash in place of double-splat fields" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.info "payload", {"err" => "kitchen on fire", "batch" => 2}
+      io.to_s.should eq("INFO payload err=kitchen on fire batch=2\n")
+    end
+
+    it "matches the doublesplat form for similar input" do
+      splat = IO::Memory.new
+      runtime = IO::Memory.new
+      Etch::Logger.new(splat).info "payload", err: "boom", n: 42
+      Etch::Logger.new(runtime).info "payload", {"err" => "boom", "n" => 42}
+      runtime.to_s.should eq(splat.to_s)
+    end
+
+    it "preserves order and dupe keys" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.log(:info, "dupes", [{"k", "first"}, {"k", "second"}])
+      io.to_s.should eq("INFO dupes k=first k=second\n")
+    end
+
+    it "appends to a sub-logger without modifying the parent" do
+      io = IO::Memory.new
+      parent = Etch::Logger.new(io)
+      child = parent.with({"batch" => 2})
+      child.fields.should eq([{"batch", 2_i64}] of Tuple(String, Etch::Value))
+      parent.fields.should be_empty
+    end
+
+    it "emits no fields when receiving an empty input collection" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io)
+      log.info "bare", {} of String => Etch::Value
+      io.to_s.should eq("INFO bare\n")
+    end
+  end
+
   describe "concurrency safety" do
     it "avoids interleaving fragments of concurrent records" do
       io = IO::Memory.new

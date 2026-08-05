@@ -53,6 +53,16 @@ module Etch
       copy_with(prefix: @prefix, fields: @fields + to_fields(kv))
     end
 
+    # Returns a new, unique logger instance carrying this logger's configuration along with the provided *fields* appended.
+    #
+    # Counterpart for `#with(**kv)` for keys not known at compile time. Accepts any enumerable of pairs, including a `Hash` and a `Fields` list.
+    #
+    # The original parent is not modified.
+
+    def with(fields : Enumerable(Tuple(String, V))) : Logger forall V
+      copy_with(prefix: @prefix, fields: @fields + to_fields(fields))
+    end
+
     # Makes an independent logger copy with *prefix* populated, sharing all other config properties state.
     def with_prefix(prefix : String) : Logger
       copy_with(prefix: prefix, fields: @fields.dup)
@@ -82,6 +92,14 @@ module Etch
       emit(level, msg, to_fields(kv), file: __file, line: __line)
     end
 
+    # Emits *msg* at *level* with runtime keyed *fields*.
+    #
+    # Counterpart for `#log(level, msg, **kv)` for keys not known at compile time.
+    def log(level : Level, msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
+      return unless enabled?(level)
+      emit(level, msg, to_fields(fields), file: __file, line: __line)
+    end
+
     # Emits specifically formatted `sprintf(format, *args)` at *level*.
     #
     # Omits when *level* is filtered out by `#level`
@@ -96,6 +114,12 @@ module Etch
       def {{name.id}}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
         return unless enabled?(Level::{{level.id}})
         emit(Level::{{level.id}}, msg, to_fields(kv), file: __file, line: __line)
+      end
+
+      # Emits *msg* at the {{name.id}} level with runtime keyed *fields*.
+      def {{name.id}}(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
+        return unless enabled?(Level::{{level.id}})
+        emit(Level::{{level.id}}, msg, to_fields(fields), file: __file, line: __line)
       end
 
       # Emits the blocks value at the {{name.id}} level with the given *kv* fields.
@@ -113,12 +137,17 @@ module Etch
       end
     {% end %}
 
-    # Emits a fatal level *msg*, then raises `FatalError`.
+    # Emits a fatal level *msg* with the provided *kv* fields, then raises `FatalError`.
     def fatal(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : NoReturn
       emit_fatal(msg, to_fields(kv), __file, __line)
     end
 
-    # Emits the block's value at the fatal level, then raises `FatalError`.
+    # Emits a fatal level *msg* with the runtime keyed *fields*, then raises `FatalError`.
+    def fatal(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : NoReturn forall V
+      emit_fatal(msg, to_fields(fields), __file, __line)
+    end
+
+    # Emits the block's value with the provided *kv* fields at the fatal level, then raises `FatalError`.
     def fatal(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : NoReturn
       emit_fatal(yield, to_fields(kv), __file, __line)
     end
@@ -128,12 +157,17 @@ module Etch
       emit_fatal(sprintf(format, *args), Fields.new, __file, __line)
     end
 
-    # Emits *msg* with no level label, ignoring any configured level.
+    # Emits *msg* with the provided *kv* fields and no level label, ignoring any configured level.
     def print(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
       emit(Level::None, msg, to_fields(kv), file: __file, line: __line)
     end
 
-    # Emits the block's value with no level label, ignoring any configured level.
+    # Emits *msg* with no level label and runtime keyed *fields*, ignoring any configured level.
+    def print(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
+      emit(Level::None, msg, to_fields(fields), file: __file, line: __line)
+    end
+
+    # Emits the block's value with the provided *kv* fields and no level label, ignoring any configured level.
     def print(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
       emit(Level::None, yield, to_fields(kv), file: __file, line: __line)
     end

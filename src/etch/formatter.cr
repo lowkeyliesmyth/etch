@@ -7,10 +7,14 @@ module Etch
     Logfmt
   end
 
-  # Output key names.
+  # Timestamp field semantic tag that identifies the special, ordered fields in the k-v Fields array. The Logger rendering engine matches on these Fields tags to decide ordering and styling.
   TIMESTAMP_KEY = "time"
-  MESSAGE_KEY   = "msg"
-  LEVEL_KEY     = "level"
-  CALLER_KEY    = "caller"
-  PREFIX_KEY    = "prefix"
+  # Message field semantic tag that identifies the special, ordered fields in the k-v Fields array. The Logger rendering engine matches on these Fields tags to decide ordering and styling.
+  MESSAGE_KEY = "msg"
+  # Level field semantic tag that identifies the special, ordered fields in the k-v Fields array. The Logger rendering engine matches on these Fields tags to decide ordering and styling.
+  LEVEL_KEY = "level"
+  # Caller field semantic tag that identifies the special, ordered fields in the k-v Fields array. The Logger rendering engine matches on these Fields tags to decide ordering and styling.
+  CALLER_KEY = "caller"
+  # Prefix field semantic tag that identifies the special, ordered fields in the k-v Fields array. The Logger rendering engine matches on these Fields tags to decide ordering and styling.
+  PREFIX_KEY = "prefix"
 end
