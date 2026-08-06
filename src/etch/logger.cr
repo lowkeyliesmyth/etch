@@ -4,6 +4,7 @@ require "./time"
 require "./value"
 require "./error"
 require "./options"
+require "./styles"
 
 module Etch
   # A mutable, structured logger with levels.
@@ -12,7 +13,7 @@ module Etch
   #
   # Every level method captures the callsite through `__file` / `__line` default args.
   class Logger
-    property output : IO
+    getter output : IO
     property level : Level
     property prefix : String
     property time_format : String
@@ -22,6 +23,9 @@ module Etch
     property? report_timestamp : Bool
     property? report_caller : Bool
     property fields : Fields
+    property styles : Styles
+    getter env : Foundation::Env
+    getter renderer : Sheen::Renderer
 
     # Build a logger with configurations mirroring `Options`. *output* defaults to `STDERR`.
     #
@@ -37,13 +41,37 @@ module Etch
       @caller_formatter : CallerFormatter? = nil,
       @formatter : Formatter = Formatter::Text,
       @fields : Fields = Fields.new,
+      @styles : Styles = Styles.default,
+      @env : Foundation::Env = Foundation::LiveEnv.new,
+      # Conditional so that children copies can reuse the same Sheen renderer
+      renderer : Sheen::Renderer? = nil,
     )
       @mutex = Mutex.new
+      @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
 
-    # Whether a record at *level* would be emitted.
+    # Whether or not a record at *level* would be emitted.
     def enabled?(level : Level) : Bool
       level >= @level
+    end
+
+    # Redirects output to the provided *output* IO.
+    #
+    # Also replacing the injected renderer with the newly rebuilt renderer so the new destination's color profile governs subsequent renders.
+    def output=(output : IO) : IO
+      @output = output
+      @renderer = Sheen::Renderer.new(output, env: @env)
+      output
+    end
+
+    # The color profile of the bound renderer.
+    def color_profile : Foundation::Profile
+      @renderer.color_profile
+    end
+
+    # Bypass autodetection and force the renderer to use the provided color *profile*.
+    def color_profile=(profile : Foundation::Profile) : Foundation::Profile
+      @renderer.color_profile = profile
     end
 
     # Returns a new, unique logger instance carrying this logger's configuration along with the given *kv* key-value fields appended.
@@ -264,6 +292,7 @@ module Etch
       fields
     end
 
+    # Create a child Logger copy, explicitly setting the *prefix* and *fields* on the new child.
     private def copy_with(prefix : String, fields : Fields) : Logger
       Logger.new(
         output: @output,
@@ -276,6 +305,9 @@ module Etch
         caller_formatter: @caller_formatter,
         formatter: @formatter,
         fields: fields,
+        styles: @styles.clone,
+        env: @env,
+        renderer: @renderer,
       )
     end
   end

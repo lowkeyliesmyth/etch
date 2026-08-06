@@ -380,3 +380,58 @@ describe "Etch.run" do
     expect_raises(ArgumentError) { Etch.run { raise ArgumentError.new("other") } }
   end
 end
+
+describe "styles" do
+  it "defaults to using Etch::Styles.default" do
+    log = Etch::Logger.new(IO::Memory.new)
+    log.styles.levels[Etch::Level::Info].value.should eq("INFO")
+  end
+
+  it "gives a child logger styles it can self-modify without modifying the parent" do
+    parent = Etch::Logger.new(IO::Memory.new)
+    child = parent.with(batch: 2)
+    child.styles.levels[Etch::Level::Error] = Sheen::Style.new.string("BOOM")
+    parent.styles.levels[Etch::Level::Error].value.should eq("ERROR")
+  end
+end
+
+describe "renderer" do
+  it "binds a renderer to the output during construction" do
+    io = IO::Memory.new
+    Etch::Logger.new(io).renderer.output.should be(io)
+  end
+
+  it "shares the renderer with children so a forced profile survives copying via #with" do
+    log = Etch::Logger.new(IO::Memory.new)
+    log.color_profile = Foundation::Profile::TrueColor
+    child = log.with(batch: 2)
+    child.color_profile.should eq(Foundation::Profile::TrueColor)
+  end
+
+  it "rebuilds the renderer when the output target changes" do
+    log = Etch::Logger.new(IO::Memory.new)
+    before = log.renderer
+    second = IO::Memory.new
+    log.output = second
+    log.renderer.should_not be(before)
+    log.renderer.output.should be(second)
+    log.output.should be(second)
+  end
+
+  it "reads and forces the color profile through the bound renderer" do
+    log = Etch::Logger.new(IO::Memory.new, env: Foundation::MockEnv.new)
+    # Autodetected NoTTY from MockEnv
+    log.color_profile.should eq(Foundation::Profile::NoTTY)
+    log.color_profile = Foundation::Profile::ANSI256
+    # Confirming that setting the color profile propagates through to the renderer
+    log.renderer.color_profile.should eq(Foundation::Profile::ANSI256)
+  end
+
+  it "passes the injected env var through to profile detection" do
+    forced = Etch::Logger.new(IO::Memory.new, env: Foundation::MockEnv.new({"FORCE_COLOR" => "1"}))
+    forced.color_profile.should eq(Foundation::Profile::ANSI)
+
+    disabled = Etch::Logger.new(IO::Memory.new, env: Foundation::MockEnv.new({"NO_COLOR" => "1"}))
+    disabled.color_profile.should eq(Foundation::Profile::Ascii)
+  end
+end
