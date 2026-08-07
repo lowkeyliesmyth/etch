@@ -138,30 +138,30 @@ module Etch
 
     # Generate the same group of methods for the four non-fatal standard levels.
     {% for name, level in {debug: "Debug", info: "Info", warn: "Warn", error: "Error"} %}
-      # Emits *msg* at the {{name.id}} level with the given *kv* fields.
-      def {{name.id}}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, msg, to_fields(kv), file: __file, line: __line)
+      # Emits *msg* at the {{ name.id }} level with the given *kv* fields.
+      def {{ name.id }}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, msg, to_fields(kv), file: __file, line: __line)
       end
 
-      # Emits *msg* at the {{name.id}} level with runtime keyed *fields*.
-      def {{name.id}}(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, msg, to_fields(fields), file: __file, line: __line)
+      # Emits *msg* at the {{ name.id }} level with runtime keyed *fields*.
+      def {{ name.id }}(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, msg, to_fields(fields), file: __file, line: __line)
       end
 
-      # Emits the blocks value at the {{name.id}} level with the given *kv* fields.
+      # Emits the blocks value at the {{ name.id }} level with the given *kv* fields.
       #
       # Block is evaluated only when the level is enabled.
-      def {{name.id}}(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, yield, to_fields(kv), file: __file, line: __line)
+      def {{ name.id }}(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, yield, to_fields(kv), file: __file, line: __line)
       end
 
-      # Emits specifically formatted `sprintf(format, *args)` at the {{name.id}} level
-      def {{name.id}}f(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, sprintf(format, *args), Fields.new, file: __file, line: __line)
+      # Emits specifically formatted `sprintf(format, *args)` at the {{ name.id }} level
+      def {{ name.id }}f(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, sprintf(format, *args), Fields.new, file: __file, line: __line)
       end
     {% end %}
 
@@ -242,7 +242,7 @@ module Etch
     # Renders *kvs* as a single unstyled text line.
     #
     # TODO: Simple now. Fully featured implementation later.
-    private def render(kvs : Fields) : String # ameba:disable Metrics/CyclomaticComplexity
+    private def render(kvs : Fields) : String
       String.build do |io|
         rest = Fields.new
         leading = false
