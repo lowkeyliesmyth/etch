@@ -5,6 +5,7 @@ require "./value"
 require "./error"
 require "./options"
 require "./styles"
+require "./text_formatter"
 
 module Etch
   # A mutable, structured logger with levels.
@@ -215,7 +216,7 @@ module Etch
 
     # Assembles the Logger k-v list in structured order, renders it, and writes it out in a concurrency-safe way.
     #
-    # Stores raw `Time` and `Level` values for the formatter to appropriately.
+    # Stores raw `Time` and `Level` values for the formatter to appropriately render.
     private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
       kvs = Fields.new
 
@@ -239,48 +240,9 @@ module Etch
       end
     end
 
-    # Renders *kvs* as a single unstyled text line.
-    #
-    # TODO: Simple now. Fully featured implementation later.
+    # Renders *kvs* as a single unstyled text line throught the `Text` formatter.
     private def render(kvs : Fields) : String
-      String.build do |io|
-        rest = Fields.new
-        leading = false
-
-        kvs.each do |(key, value)|
-          case key
-          when TIMESTAMP_KEY
-            io << ' ' if leading
-            io << value.as(Time).to_s(@time_format)
-            leading = true
-          when CALLER_KEY
-            io << ' ' if leading
-            io << value
-            leading = true
-          when LEVEL_KEY
-            io << ' ' if leading
-            io << level_label(value.as(Level))
-            leading = true
-          when PREFIX_KEY
-            io << ' ' if leading
-            io << value << ':'
-            leading = true
-          when MESSAGE_KEY
-            io << ' ' if leading
-            io << value
-            leading = true
-          else
-            rest << {key, value}
-          end
-        end
-        rest.each { |(key, value)| io << ' ' << key << '=' << value }
-        io << '\n'
-      end
-    end
-
-    # Returns the log entry's 4-char uppercase level label (eg "INFO")
-    private def level_label(level : Level) : String
-      level.to_s.upcase[0, 4]
+      TextFormatter.new(@styles, @renderer, @time_format).render(kvs)
     end
 
     # Converts the callsite named-tuple *kv* into `Fields`. Each value is coerced into a valid Value type.

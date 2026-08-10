@@ -70,7 +70,7 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
       log.error "Oops", err: "kitchen on fire"
-      io.to_s.should eq("ERRO Oops err=kitchen on fire\n")
+      io.to_s.should eq(%(ERRO Oops err="kitchen on fire"\n))
     end
 
     it "allows user-provided fieldnames that conflict with caller metadata reporting to be passed as-is" do
@@ -228,21 +228,21 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true)
       log.info "here"
-      io.to_s.should match(/\AINFO etch\/logger_spec\.cr:\d+ here\n\z/)
+      io.to_s.should match(/\AINFO <etch\/logger_spec\.cr:\d+> here\n\z/)
     end
 
     it "honors a non-default caller formatter" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true, caller_formatter: Etch::LONG_CALLER_FORMATTER)
       log.info "here"
-      io.to_s.should match(/\AINFO \/.+logger_spec\.cr:\d+ here\n\z/)
+      io.to_s.should match(/\AINFO <\/.+logger_spec\.cr:\d+> here\n\z/)
     end
 
     it "reports the outer site when a wrapper forwards file and line" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true)
       log.info "wrapped", __file: "outer.cr", __line: 7
-      io.to_s.should eq("INFO outer.cr:7 wrapped\n")
+      io.to_s.should eq("INFO <outer.cr:7> wrapped\n")
     end
   end
 
@@ -312,7 +312,7 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
       log.info "payload", {"err" => "kitchen on fire", "batch" => 2}
-      io.to_s.should eq("INFO payload err=kitchen on fire batch=2\n")
+      io.to_s.should eq(%(INFO payload err="kitchen on fire" batch=2\n))
     end
 
     it "matches the doublesplat form for similar input" do
