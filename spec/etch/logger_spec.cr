@@ -70,7 +70,7 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
       log.error "Oops", err: "kitchen on fire"
-      io.to_s.should eq("ERRO Oops err=kitchen on fire\n")
+      io.to_s.should eq(%(ERRO Oops err="kitchen on fire"\n))
     end
 
     it "allows user-provided fieldnames that conflict with caller metadata reporting to be passed as-is" do
@@ -228,21 +228,41 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true)
       log.info "here"
-      io.to_s.should match(/\AINFO etch\/logger_spec\.cr:\d+ here\n\z/)
+      io.to_s.should match(/\AINFO <etch\/logger_spec\.cr:\d+> here\n\z/)
     end
 
     it "honors a non-default caller formatter" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true, caller_formatter: Etch::LONG_CALLER_FORMATTER)
       log.info "here"
-      io.to_s.should match(/\AINFO \/.+logger_spec\.cr:\d+ here\n\z/)
+      io.to_s.should match(/\AINFO <\/.+logger_spec\.cr:\d+> here\n\z/)
     end
 
     it "reports the outer site when a wrapper forwards file and line" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, report_caller: true)
       log.info "wrapped", __file: "outer.cr", __line: 7
-      io.to_s.should eq("INFO outer.cr:7 wrapped\n")
+      io.to_s.should eq("INFO <outer.cr:7> wrapped\n")
+    end
+
+    it "places the caller after the level and before the prefix" do
+      io = IO::Memory.new
+      log = Etch::Logger.new(io, report_caller: true, prefix: "baking")
+      log.info "here", __file: "outer.cr", __line: 7
+      io.to_s.should eq("INFO <outer.cr:7> baking: here\n")
+    end
+
+    it "supports invoking a custom caller formatter" do
+      io = IO::Memory.new
+      seen = [] of Tuple(String, Int32, String)
+      formatter = Etch::CallerFormatter.new do |file, line, function|
+        seen << {file, line, function}
+        "#{file}@#{line}"
+      end
+      log = Etch::Logger.new(io, report_caller: true, caller_formatter: formatter)
+      log.info "here", __file: "outer.cr", __line: 7
+      seen.should eq([{"outer.cr", 7, ""}])
+      io.to_s.should eq("INFO <outer.cr@7> here\n")
     end
   end
 
@@ -312,7 +332,7 @@ describe Etch::Logger do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
       log.info "payload", {"err" => "kitchen on fire", "batch" => 2}
-      io.to_s.should eq("INFO payload err=kitchen on fire batch=2\n")
+      io.to_s.should eq(%(INFO payload err="kitchen on fire" batch=2\n))
     end
 
     it "matches the doublesplat form for similar input" do
@@ -433,5 +453,29 @@ describe "renderer" do
 
     disabled = Etch::Logger.new(IO::Memory.new, env: Foundation::MockEnv.new({"NO_COLOR" => "1"}))
     disabled.color_profile.should eq(Foundation::Profile::Ascii)
+  end
+end
+
+describe "unleveled printing" do
+  it "emits the message with no level label" do
+    io = IO::Memory.new
+    log = Etch::Logger.new(io)
+    log.print "unleveled", batch: 2
+    io.to_s.should eq("unleveled batch=2\n")
+  end
+
+  it "emits regardless of the configured level" do
+    io = IO::Memory.new
+    log = Etch::Logger.new(io, level: :fatal)
+    log.print "still here bruh"
+    io.to_s.should eq("still here bruh\n")
+  end
+
+  it "renders the block and sprintf versions too" do
+    io = IO::Memory.new
+    log = Etch::Logger.new(io)
+    log.print { "lazy #{1 + 2}" }
+    log.printf "%s has %d items", "cart", 3
+    io.to_s.should eq("lazy 3\ncart has 3 items\n")
   end
 end

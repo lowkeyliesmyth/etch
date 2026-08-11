@@ -5,6 +5,7 @@ require "./value"
 require "./error"
 require "./options"
 require "./styles"
+require "./text_formatter"
 
 module Etch
   # A mutable, structured logger with levels.
@@ -138,30 +139,30 @@ module Etch
 
     # Generate the same group of methods for the four non-fatal standard levels.
     {% for name, level in {debug: "Debug", info: "Info", warn: "Warn", error: "Error"} %}
-      # Emits *msg* at the {{name.id}} level with the given *kv* fields.
-      def {{name.id}}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, msg, to_fields(kv), file: __file, line: __line)
+      # Emits *msg* at the {{ name.id }} level with the given *kv* fields.
+      def {{ name.id }}(msg, __file : String = __FILE__, __line : Int32 = __LINE__, **kv) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, msg, to_fields(kv), file: __file, line: __line)
       end
 
-      # Emits *msg* at the {{name.id}} level with runtime keyed *fields*.
-      def {{name.id}}(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, msg, to_fields(fields), file: __file, line: __line)
+      # Emits *msg* at the {{ name.id }} level with runtime keyed *fields*.
+      def {{ name.id }}(msg, fields : Enumerable(Tuple(String, V)), __file : String = __FILE__, __line : Int32 = __LINE__) : Nil forall V
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, msg, to_fields(fields), file: __file, line: __line)
       end
 
-      # Emits the blocks value at the {{name.id}} level with the given *kv* fields.
+      # Emits the blocks value at the {{ name.id }} level with the given *kv* fields.
       #
       # Block is evaluated only when the level is enabled.
-      def {{name.id}}(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, yield, to_fields(kv), file: __file, line: __line)
+      def {{ name.id }}(__file : String = __FILE__, __line : Int32 = __LINE__, **kv, &) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, yield, to_fields(kv), file: __file, line: __line)
       end
 
-      # Emits specifically formatted `sprintf(format, *args)` at the {{name.id}} level
-      def {{name.id}}f(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
-        return unless enabled?(Level::{{level.id}})
-        emit(Level::{{level.id}}, sprintf(format, *args), Fields.new, file: __file, line: __line)
+      # Emits specifically formatted `sprintf(format, *args)` at the {{ name.id }} level
+      def {{ name.id }}f(format : String, *args, __file : String = __FILE__, __line : Int32 = __LINE__) : Nil
+        return unless enabled?(Level::{{ level.id }})
+        emit(Level::{{ level.id }}, sprintf(format, *args), Fields.new, file: __file, line: __line)
       end
     {% end %}
 
@@ -215,7 +216,7 @@ module Etch
 
     # Assembles the Logger k-v list in structured order, renders it, and writes it out in a concurrency-safe way.
     #
-    # Stores raw `Time` and `Level` values for the formatter to appropriately.
+    # Stores raw `Time` and `Level` values for the formatter to appropriately render.
     private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
       kvs = Fields.new
 
@@ -239,48 +240,9 @@ module Etch
       end
     end
 
-    # Renders *kvs* as a single unstyled text line.
-    #
-    # TODO: Simple now. Fully featured implementation later.
-    private def render(kvs : Fields) : String # ameba:disable Metrics/CyclomaticComplexity
-      String.build do |io|
-        rest = Fields.new
-        leading = false
-
-        kvs.each do |(key, value)|
-          case key
-          when TIMESTAMP_KEY
-            io << ' ' if leading
-            io << value.as(Time).to_s(@time_format)
-            leading = true
-          when CALLER_KEY
-            io << ' ' if leading
-            io << value
-            leading = true
-          when LEVEL_KEY
-            io << ' ' if leading
-            io << level_label(value.as(Level))
-            leading = true
-          when PREFIX_KEY
-            io << ' ' if leading
-            io << value << ':'
-            leading = true
-          when MESSAGE_KEY
-            io << ' ' if leading
-            io << value
-            leading = true
-          else
-            rest << {key, value}
-          end
-        end
-        rest.each { |(key, value)| io << ' ' << key << '=' << value }
-        io << '\n'
-      end
-    end
-
-    # Returns the log entry's 4-char uppercase level label (eg "INFO")
-    private def level_label(level : Level) : String
-      level.to_s.upcase[0, 4]
+    # Renders *kvs* as a single unstyled text line throught the `Text` formatter.
+    private def render(kvs : Fields) : String
+      TextFormatter.new(@styles, @renderer, @time_format).render(kvs)
     end
 
     # Converts the callsite named-tuple *kv* into `Fields`. Each value is coerced into a valid Value type.
