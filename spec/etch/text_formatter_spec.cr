@@ -48,6 +48,11 @@ describe Etch::TextFormatter do
       formatter.render(kvs).should eq(%(say="he said \\"hi\\""\n))
     end
 
+    it "quotes and escapes a value carrying ANSI escape sequences" do
+      kvs = [{"ansi", "\e[1mred\e[0m"}] of Tuple(String, Etch::Value)
+      formatter.render(kvs).should eq(%(ansi="\\x1b[1mred\\x1b[0m"\n))
+    end
+
     it "escapes a control character inside a quoted value" do
       kvs = [{"raw", "a\tb"}] of Tuple(String, Etch::Value)
       formatter.render(kvs).should eq(%(raw="a\\tb"\n))

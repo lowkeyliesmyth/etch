@@ -1,4 +1,4 @@
-require "./spec_helper"
+require "../spec_helper"
 
 describe Etch::FatalError do
   it "carries an optional message and fields" do
