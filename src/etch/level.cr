@@ -18,13 +18,20 @@ module Etch
     #
     # Internal `None` sentinel falls through to its integer value.
     def to_s(io : IO) : Nil
+      io << to_s
+    end
+
+    # Returns the lowercase level name.
+    #
+    # Internal `None` sentinel falls through to its integer value.
+    def to_s : String
       case self
-      in Debug then io << "debug"
-      in Info  then io << "info"
-      in Warn  then io << "warn"
-      in Error then io << "error"
-      in Fatal then io << "fatal"
-      in None  then io << value
+      in Debug then "debug"
+      in Info  then "info"
+      in Warn  then "warn"
+      in Error then "error"
+      in Fatal then "fatal"
+      in None  then value.to_s
       end
     end
 
