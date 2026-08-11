@@ -9,7 +9,9 @@ on:
       - "spec/**"
       - "shard.yml"
       - "shard.lock"
-  # Caches written by a `pull_request` run are scoped to refs/pull/N/merge and are unreadable by any other PR. 
+      - ".ameba.yml"
+      - ".github/workflows/pr-ameba.yml"
+  # Caches written by a `pull_request` run are scoped to refs/pull/N/merge and are unreadable by any other PR.
   # Running on main writes the cache to the `refs/heads/main` scope, which every PR is allowed to restore from.
   push:
     branches:
@@ -19,9 +21,10 @@ on:
       - "spec/**"
       - "shard.yml"
       - "shard.lock"
-
+      - ".ameba.yml"
+      - ".github/workflows/pr-ameba.yml"
 env:
-  CRYSTAL_VERSION: "1.20.1"
+  CRYSTAL_VERSION: "1.21.0"
 
 jobs:
   ameba:
@@ -41,11 +44,18 @@ jobs:
             lib
             bin/ameba
           # cache invalidates when any shard dependencies change or crystal version changes. Cache on shard.yml because library shards don't get their shard.lock file committed.
-          key: ameba-${{ runner.os }}-crystal-${{ env.CRYSTAL_VERSION }}-${{ hashFiles('shard.yml') }}
+          key: ameba-v2-${{ runner.os }}-crystal-${{ env.CRYSTAL_VERSION }}-${{ hashFiles('shard.yml') }}
 
       - name: Install shards
         if: steps.cache.outputs.cache-hit != 'true'
         run: shards install
+
+      # ameba >=1.7.0-dev requires explicitly building now
+      - name: Build ameba binary
+        if: steps.cache.outputs.cache-hit != 'true' || hashFiles('bin/ameba') == ''
+        run: |
+          mkdir -p bin
+          crystal build -o bin/ameba lib/ameba/bin/ameba.cr
 
       # Split save from restore and place it ahead of the lint.
       # actions/cache saves in a post step gated on `post-if: success()`.
