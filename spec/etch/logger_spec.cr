@@ -478,4 +478,46 @@ describe "unleveled printing" do
     log.printf "%s has %d items", "cart", 3
     io.to_s.should eq("lazy 3\ncart has 3 items\n")
   end
+
+  it "supports omitting the level key in JSON and logfmt too" do
+    json = IO::Memory.new
+    logfmt = IO::Memory.new
+    Etch::Logger.new(json, formatter: :json).print "unleveled", batch: 2
+    Etch::Logger.new(logfmt, formatter: :logfmt).print "unleveled", batch: 2
+
+    json.to_s.should eq(%({"msg":"unleveled","batch":2}\n))
+    logfmt.to_s.should eq("msg=unleveled batch=2\n")
+  end
+end
+
+describe "formatter dispatch" do
+  it "renders the same call in three different ways" do
+    output_kinds = Etch::Formatter.values.map do |formatter|
+      io = IO::Memory.new
+      Etch::Logger.new(output: io, formatter: formatter).info "cookies", batch: 2
+      io.to_s
+    end
+
+    output_kinds.should eq([
+      "INFO cookies batch=2\n",
+      %({"level":"info","msg":"cookies","batch":2}\n),
+      "level=info msg=cookies batch=2\n",
+    ])
+  end
+
+  it "supports live-swapping formatters on a logger" do
+    io = IO::Memory.new
+    log = Etch::Logger.new(io)
+    log.info "first"
+    log.formatter = :logfmt
+    log.info "second"
+    io.to_s.should eq("INFO first\nlevel=info msg=second\n")
+  end
+
+  it "keeps and applies the existing formatter into a sub-logger" do
+    io = IO::Memory.new
+    parent = Etch::Logger.new(io, formatter: :json)
+    parent.with(batch: 2).info "child"
+    io.to_s.should eq(%({"level":"info","msg":"child","batch":2}\n))
+  end
 end
