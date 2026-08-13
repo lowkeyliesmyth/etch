@@ -6,6 +6,8 @@ require "./error"
 require "./options"
 require "./styles"
 require "./text_formatter"
+require "./json_formatter"
+require "./logfmt_formatter"
 
 module Etch
   # A mutable, structured logger with levels.
@@ -240,9 +242,15 @@ module Etch
       end
     end
 
-    # Renders *kvs* as a single unstyled text line throught the `Text` formatter.
+    # Render *kvs* through the configured `#formatter`.
+    #
+    # Only `Text` takes a style and a renderer, other formatters are intentionally unstyled.
     private def render(kvs : Fields) : String
-      TextFormatter.new(@styles, @renderer, @time_format).render(kvs)
+      case @formatter
+      in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(kvs)
+      in .json?   then JSONFormatter.new(@time_format).render(kvs)
+      in .logfmt? then LogfmtFormatter.new(@time_format).render(kvs)
+      end
     end
 
     # Converts the callsite named-tuple *kv* into `Fields`. Each value is coerced into a valid Value type.
