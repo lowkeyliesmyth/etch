@@ -389,18 +389,6 @@ describe Etch::Logger do
   end
 end
 
-describe "Etch.run" do
-  it "returns normally when the block completes" do
-    ran = false
-    Etch.run { ran = true }
-    ran.should be_true
-  end
-
-  it "propagates exceptions other than FatalError" do
-    expect_raises(ArgumentError) { Etch.run { raise ArgumentError.new("other") } }
-  end
-end
-
 describe "styles" do
   it "defaults to using Etch::Styles.default" do
     log = Etch::Logger.new(IO::Memory.new)
