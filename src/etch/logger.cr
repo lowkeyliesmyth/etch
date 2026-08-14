@@ -49,7 +49,7 @@ module Etch
       # Conditional so that children copies can reuse the same Sheen renderer
       renderer : Sheen::Renderer? = nil,
     )
-      @mutex = Mutex.new
+      @mutex = Sync::Mutex.new
       @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
 
