@@ -1,6 +1,6 @@
 require "./examples"
 
-# CLI dispatcher for Etch reference consumer examples.as
+# CLI dispatcher for Etch reference consumer examples.
 #
 # Usage: `crystal run examples/main.cr -- <example|all>`
 name = ARGV[0]?

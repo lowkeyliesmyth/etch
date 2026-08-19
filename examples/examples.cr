@@ -32,3 +32,4 @@ end
 
 # Example consumers get self-registered when required. One line per example consumer.
 require "./basic/default"
+require "./basic/new"
