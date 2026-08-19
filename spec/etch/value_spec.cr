@@ -27,6 +27,34 @@ describe Etch do
       Etch.coerce_value({"a" => 1, "b" => 2}).should eq("{\"a\" => 1, \"b\" => 2}")
     end
   end
+
+  describe ".coerce_fields" do
+    it "widens values while preserving order and dupe keys" do
+      input = [
+        {"a", 1},
+        {"active", true},
+        {"a", 3.5_f32},
+      ]
+
+      Etch.coerce_fields(input).should eq([
+        {"a", 1_i64},
+        {"active", true},
+        {"a", 3.5_f64},
+      ] of Tuple(String, Etch::Value))
+    end
+
+    it "accepts an empty runtime collection type" do
+      fields = [] of Tuple(String, Etch::Value)
+
+      Etch.coerce_fields(fields).should be_empty
+    end
+
+    it "degrades unsupported value types to their string representations" do
+      fields = [{"nested", {"a" => 1}}]
+
+      Etch.coerce_fields(fields).should eq([{"nested", "{\"a\" => 1}"}])
+    end
+  end
 end
 
 describe Etch::Fields do

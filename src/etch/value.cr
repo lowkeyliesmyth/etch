@@ -18,4 +18,13 @@ module Etch
     else            value.to_s
     end
   end
+
+  # Converts runtime keyed *fields* into a structured `Fields` form.
+  def self.coerce_fields(fields : Enumerable(Tuple(String, V))) : Fields forall V
+    result = Fields.new
+    fields.each do |key, value|
+      result << {key, coerce_value(value)}
+    end
+    result
+  end
 end
