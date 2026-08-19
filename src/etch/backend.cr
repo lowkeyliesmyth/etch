@@ -82,6 +82,33 @@ module Etch
       )
     end
 
+    # Sets the minimum Etch *level* accepted by the associated logger.
+    def level=(level : Level) : Level
+      @logger.level = level
+    end
+
+    # Sets the minimum Etch *level* using symbol shorthand
+    def level=(level : Symbol) : Level
+      mapped = level == :none ? Level::None : Level.parse(level.to_s)
+      @logger.level = mapped
+    end
+
+    # Sets the minimum logger level *severity*, mapped internally to an Etch level.
+    def level=(severity : ::Log::Severity) : ::Log::Severity
+      @logger.level = level_for(severity)
+      severity
+    end
+
+    # Sets the *formatter* used by the associated logger
+    def formatter=(formatter : Formatter) : Formatter
+      @logger.formatter = formatter
+    end
+
+    # Sets the text styles used by the associated logger.
+    def styles=(styles : Styles) : Styles
+      @logger.styles = styles
+    end
+
     # Maps stdlib's larger *severity* count into Etch's smaller level set.
     private def level_for(severity : ::Log::Severity) : Level
       case severity

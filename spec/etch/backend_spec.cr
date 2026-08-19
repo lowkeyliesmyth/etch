@@ -180,4 +180,88 @@ describe Etch::Backend do
     backend.write(backend_entry(:fatal, "shutdown"))
     io.to_s.should eq("level=fatal msg=shutdown\n")
   end
+
+  it "routes stdlib Log calls through the default async dispatcher" do
+    io = IO::Memory.new
+    backend = Etch::Backend.new(io, formatter: :json)
+
+    begin
+      backend.dispatcher.should be_a(Log::AsyncDispatcher)
+
+      Log.setup do |config|
+        config.bind "*", :info, backend
+      end
+
+      Log.with_context(scope: "integration") do
+        Log.info &.emit("routed", event: 42)
+      end
+    ensure
+      Log.setup(:none)
+      backend.close
+    end
+
+    record = JSON.parse(io.to_s)
+    record.as_h.size.should eq(4)
+    record["level"].as_s.should eq("info")
+    record["msg"].as_s.should eq("routed")
+    record["event"].as_i64.should eq(42)
+    record["scope"].as_s.should eq("integration")
+  end
+
+  it "respects stdlib source filters before an entry reaches Etch" do
+    io = IO::Memory.new
+    backend = Etch::Backend.new(
+      io,
+      dispatch_mode: :direct,
+      formatter: :logfmt,
+    )
+
+    builder = Log::Builder.new
+    filtered_evaluated = false
+
+    begin
+      Log.setup(builder: builder) do |config|
+        config.bind "allowed.*", :info, backend
+      end
+
+      builder.for("blocked").info do
+        filtered_evaluated = true
+        "hidden"
+      end
+      builder.for("allowed.worker").info { "visible" }
+    ensure
+      builder.close
+    end
+
+    filtered_evaluated.should be_false
+    io.to_s.should eq(
+      "level=info prefix=allowed.worker msg=visible\n"
+    )
+  end
+
+  it "passess config setters through to the associated logger" do
+    io = IO::Memory.new
+    backend = Etch::Backend.new(
+      io,
+      dispatch_mode: :direct,
+      formatter: :logfmt,
+    )
+    builder = Log::Builder.new
+
+    begin
+      Log.setup(builder: builder) do |config|
+        config.bind "*", :info, backend
+      end
+
+      log = builder.for("component")
+      log.level = :debug
+      log.debug { "visible" }
+    ensure
+      builder.close
+    end
+
+    io.to_s.should eq(
+      "level=debug prefix=component msg=visible\n"
+    )
+  end
 end
