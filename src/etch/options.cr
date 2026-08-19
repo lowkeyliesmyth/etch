@@ -8,11 +8,11 @@ module Etch
   # eg `->(t : Time) { t.to_utc }` to force UTC
   alias TimeFunction = Proc(Time, Time)
 
-  # Formats a caller annotation from the captured `(file, line, function)`
+  # Formats a caller annotation from the captured `(file, line, function)`.
   # Function name is always ""
   alias CallerFormatter = Proc(String, Int32, String, String)
 
-  # Returns the last two path segments of *file* joined to *line*. eg "etch/logger.cr:42")
+  # Returns the last two path segments of *file* joined to *line*. eg "etch/logger.cr:42").
   SHORT_CALLER_FORMATTER = CallerFormatter.new do |file, line, _fn|
     segments = file.split('/')
     short = segments.size <= 2 ? file : segments.last(2).join('/')
