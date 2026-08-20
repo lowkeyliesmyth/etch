@@ -31,10 +31,15 @@ module Examples
 end
 
 # Example consumers get self-registered when required. One line per example consumer.
+require "./app/cookies"
+require "./backend/stdlib_log"
 require "./basic/default"
 require "./basic/new"
 require "./config/format"
 require "./config/options"
+require "./context/fiber_local"
 require "./fields/error"
 require "./fields/runtime_keys"
 require "./fields/sub_logger"
+require "./formatters/trio"
+require "./styles/custom"
