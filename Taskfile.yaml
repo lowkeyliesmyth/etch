@@ -39,6 +39,21 @@ tasks:
     cmds:
       - zizmor . --fix=all
 
+  example:
+    desc: Run one example consumer (task example -- <name>)
+    cmds:
+      - crystal run examples/main.cr -- {{.CLI_ARGS}}
+
+  examples:
+    desc: Run every example consumer
+    cmds:
+      - crystal run examples/main.cr -- all
+
+  examples:check:
+    desc: Type-check example consumers without running them
+    cmds:
+      - crystal build examples/main.cr --no-codegen
+
   docs:
     desc: Generates API usage docs from inline docstrings
     cmds:
