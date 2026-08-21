@@ -8,6 +8,7 @@ require "./styles"
 require "./text_formatter"
 require "./json_formatter"
 require "./logfmt_formatter"
+require "./record"
 
 module Etch
   # A mutable, structured logger with levels.
@@ -216,36 +217,52 @@ module Etch
       raise FatalError.new(msg.to_s, fields)
     end
 
-    # Assembles the Logger k-v list in structured order, renders it, and writes it out in a concurrency-safe way.
-    #
-    # Stores raw `Time` and `Level` values for the formatter to appropriately render.
+    # Captures a semantic Record, renders it, and writes it out in a concurrency-safe way.
     private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
-      kvs = Fields.new
+      record = Record.new(
+        level,
+        msg,
+        @fields,
+        call_fields,
+        timestamp,
+        file,
+        line,
+        report_timestamp: @report_timestamp,
+        time_function: @time_function,
+        report_caller: @report_caller,
+        caller_formatter: @caller_formatter,
+        prefix: @prefix,
+      )
 
-      kvs << {TIMESTAMP_KEY, @time_function.call(timestamp || Time.local).as(Value)} if @report_timestamp
-      kvs << {LEVEL_KEY, level.as(Value)} unless level.none?
-
-      if @report_caller
-        formatter = @caller_formatter || SHORT_CALLER_FORMATTER
-        kvs << {CALLER_KEY, formatter.call(file, line, "").as(Value)}
-      end
-
-      kvs << {PREFIX_KEY, @prefix.as(Value)} unless @prefix.empty?
-      kvs << {MESSAGE_KEY, msg.to_s.as(Value)} unless msg.to_s.empty?
-      kvs.concat(@fields)
-      kvs.concat(call_fields)
-
-      line_out = render(kvs)
+      line_out = render(record)
       @mutex.synchronize do
         @output << line_out
         @output.flush
       end
     end
 
-    # Render *kvs* through the configured `#formatter`.
+    # Renders *record* through the configured `#formatter`.
     #
-    # Only `Text` takes a style and a renderer, other formatters are intentionally unstyled.
-    private def render(kvs : Fields) : String
+    private def render(record : Record) : String
+      kvs = Fields.new
+
+      record.each do |item|
+        case item
+        in Record::Timestamp
+          kvs << {TIMESTAMP_KEY, item.value.as(Value)}
+        in Record::Severity
+          kvs << {LEVEL_KEY, item.value.as(Value)}
+        in Record::Caller
+          kvs << {CALLER_KEY, item.value.as(Value)}
+        in Record::Prefix
+          kvs << {PREFIX_KEY, item.value.as(Value)}
+        in Record::Message
+          kvs << {MESSAGE_KEY, item.value.as(Value)}
+        in Record::Payload
+          kvs << {item.key, item.value}
+        end
+      end
+
       case @formatter
       in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(kvs)
       in .json?   then JSONFormatter.new(@time_format).render(kvs)
