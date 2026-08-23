@@ -2,7 +2,7 @@ require "json"
 require "./formatter"
 require "./level"
 require "./time"
-require "./value"
+require "./record"
 
 module Etch
   # Renders a log record as a single JSON object.
@@ -15,14 +15,14 @@ module Etch
     def initialize(@time_format : String)
     end
 
-    # Renders *kvs* as one newline terminted JSON object.
+    # Renders *record* as one newline terminted JSON object.
     #
     # Duped keys are preserved in order.
-    def render(kvs : Fields) : String
+    def render(record : Record) : String
       String.build do |io|
         JSON.build(io) do |json|
           json.object do
-            kvs.each { |(key, value)| write_pair(json, key, value) }
+            record.each { |item| write_item(json, item) }
           end
         end
         io << '\n'
@@ -32,22 +32,20 @@ module Etch
     # Writes one *key*-*value* pair to *json*. Reserved keys are mapped to their associated *JSON* structures.
     #
     # Note: A reserved *key* of the wrong value type is skipped.
-    private def write_pair(json : JSON::Builder, key : String, value : Value) : Nil
-      case key
-      when TIMESTAMP_KEY
-        return unless time = value.as?(Time)
-        json.field(key, time.to_s(@time_format))
-      when LEVEL_KEY
-        return unless level = value.as?(Level)
-        json.field(key, level.to_s)
-      when CALLER_KEY, PREFIX_KEY
-        return unless text = value.as?(String)
-        json.field(key, text)
-      when MESSAGE_KEY
-        return if value.nil?
-        json.field(key, value.to_s)
-      else
-        json.field(key) { write_value(json, value) }
+    private def write_item(json : JSON::Builder, item : Record::Item) : Nil
+      case item
+      in Record::Timestamp
+        json.field(TIMESTAMP_KEY, item.value.to_s(@time_format))
+      in Record::Severity
+        json.field(LEVEL_KEY, item.value.to_s)
+      in Record::Caller
+        json.field(CALLER_KEY, item.value)
+      in Record::Prefix
+        json.field(PREFIX_KEY, item.value)
+      in Record::Message
+        json.field(MESSAGE_KEY, item.value)
+      in Record::Payload
+        json.field(item.key) { write_value(json, item.value) }
       end
     end
 

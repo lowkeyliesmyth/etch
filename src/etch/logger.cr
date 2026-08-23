@@ -265,8 +265,8 @@ module Etch
 
       case @formatter
       in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(record)
-      in .json?   then JSONFormatter.new(@time_format).render(kvs)
-      in .logfmt? then LogfmtFormatter.new(@time_format).render(kvs)
+      in .json?   then JSONFormatter.new(@time_format).render(record)
+      in .logfmt? then LogfmtFormatter.new(@time_format).render(record)
       end
     end
 

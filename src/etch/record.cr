@@ -19,7 +19,7 @@ module Etch
 
     @items : Array(Item)
 
-    # Captures one Record from logger config and payload fields. Bound payload fields always preced callsite payload fields.
+    # Captures one Record from logger config and payload fields. Bound payload fields always precede callsite payload fields.
     #
     # Builtin entries are normalized and ommitted here if unset.
     def initialize(
