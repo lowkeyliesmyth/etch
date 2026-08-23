@@ -29,9 +29,8 @@ module Etch
       end
     end
 
-    # Writes one *key*-*value* pair to *json*. Reserved keys are mapped to their associated *JSON* structures.
+    # Writes one structural Record *item* to *json*.
     #
-    # Note: A reserved *key* of the wrong value type is skipped.
     private def write_item(json : JSON::Builder, item : Record::Item) : Nil
       case item
       in Record::Timestamp

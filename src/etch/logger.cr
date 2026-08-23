@@ -244,25 +244,6 @@ module Etch
     # Renders *record* through the configured `#formatter`.
     #
     private def render(record : Record) : String
-      kvs = Fields.new
-
-      record.each do |item|
-        case item
-        in Record::Timestamp
-          kvs << {TIMESTAMP_KEY, item.value.as(Value)}
-        in Record::Severity
-          kvs << {LEVEL_KEY, item.value.as(Value)}
-        in Record::Caller
-          kvs << {CALLER_KEY, item.value.as(Value)}
-        in Record::Prefix
-          kvs << {PREFIX_KEY, item.value.as(Value)}
-        in Record::Message
-          kvs << {MESSAGE_KEY, item.value.as(Value)}
-        in Record::Payload
-          kvs << {item.key, item.value}
-        end
-      end
-
       case @formatter
       in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(record)
       in .json?   then JSONFormatter.new(@time_format).render(record)
