@@ -26,6 +26,7 @@ module Etch
       String.build do |io|
         # track if any field has actually been written to the output io so far during the loop so we can correctly allocate the spacing.
         wrote = false
+        # TODO: Can we improve the performance by avoiding allocating an extra array per Record?
         items = record.to_a
         items.each_with_index do |item, index|
           emitted = write_item(io, item, first: !wrote, more_items: index < items.size - 1)

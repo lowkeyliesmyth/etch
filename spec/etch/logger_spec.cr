@@ -509,3 +509,115 @@ describe "formatter dispatch" do
     io.to_s.should eq(%({"level":"info","msg":"child","batch":2}\n))
   end
 end
+
+describe "reserved name payload fields" do
+  it "text format renders builtin fields before duped payload-level reserved builtin fields" do
+    timestamp = Time.utc(2022, 1, 2, 3, 4, 5)
+    io = IO::Memory.new
+    log = Etch::Logger.new(
+      io,
+      prefix: "builtin-prefix",
+      report_timestamp: true,
+      report_caller: true,
+      time_function: ->(_time : Time) { timestamp },
+    )
+    fields = [
+      {"time", "payload-time"},
+      {"level", "payload-level"},
+      {"caller", "payload-caller"},
+      {"prefix", "payload-prefix"},
+      {"msg", "payload-message"},
+    ] of Tuple(String, Etch::Value)
+
+    log.info(
+      "builtin-message",
+      fields,
+      __file: "builtin.cr",
+      __line: 42,
+    )
+
+    io.to_s.should eq(
+      "2022/01/02 03:04:05 INFO <builtin.cr:42> builtin-prefix: builtin-message" +
+      " time=payload-time level=payload-level caller=payload-caller prefix=payload-prefix msg=payload-message\n"
+    )
+  end
+
+  it "JSON format renders builtin fields before duped payload-level reserved builtin fields" do
+    stamp = Time.utc(2022, 1, 2, 3, 4, 5)
+    io = IO::Memory.new
+    log = Etch::Logger.new(
+      io,
+      formatter: :json,
+      prefix: "builtin-prefix",
+      report_timestamp: true,
+      report_caller: true
+    )
+    fields = [
+      {"time", "payload-time"},
+      {"level", "payload-level"},
+      {"caller", "payload-caller"},
+      {"prefix", "payload-prefix"},
+      {"msg", "first message"},
+      {"msg", "second message"},
+    ] of Tuple(String, Etch::Value)
+
+    log.emit(
+      Etch::Level::Info,
+      "builtin-message",
+      fields,
+      timestamp: stamp,
+      file: "builtin.cr",
+      line: 42,
+    )
+
+    io.to_s.should eq(
+      %({"time":"2022/01/02 03:04:05","level":"info",) +
+      %("caller":"builtin.cr:42","prefix":"builtin-prefix",) +
+      %("msg":"builtin-message","time":"payload-time",) +
+      %("level":"payload-level","caller":"payload-caller",) +
+      %("prefix":"payload-prefix","msg":"first message",) +
+      %("msg":"second message"}\n)
+    )
+  end
+
+  it "logfmt format renders builtin fields before duped payload-level reserved builtin fields, including time" do
+    envelope = Time.utc(2022, 1, 2, 3, 4, 5)
+    payload_time = Time.local(2042, 6, 7, 8, 9, 10,
+      nanosecond: 123456789,
+      location: Time::Location.fixed("payload", 2 * 3600))
+
+    io = IO::Memory.new
+    log = Etch::Logger.new(
+      io,
+      formatter: :logfmt,
+      prefix: "builtin-prefix",
+      report_timestamp: true,
+      report_caller: true,
+    )
+
+    fields = [
+      {"time", payload_time},
+      {"level", "payload-level"},
+      {"caller", "payload-caller"},
+      {"prefix", "payload-prefix"},
+      {"msg", "first message"},
+      {"msg", "second message"},
+    ] of Tuple(String, Etch::Value)
+
+    log.emit(
+      Etch::Level::Warn,
+      "builtin-message",
+      fields,
+      timestamp: envelope,
+      file: "builtin.cr",
+      line: 42,
+    )
+
+    io.to_s.should eq(
+      "time=\"2022/01/02 03:04:05\" level=warn caller=builtin.cr:42" +
+      " prefix=builtin-prefix msg=builtin-message time=2042-06-07T08:09:10.123456789+02:00" +
+      " level=payload-level caller=payload-caller prefix=payload-prefix" +
+      " msg=\"first message\" msg=\"second message\"\n"
+    )
+  end
+end
