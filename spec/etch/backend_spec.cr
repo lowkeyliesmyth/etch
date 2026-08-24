@@ -264,4 +264,48 @@ describe Etch::Backend do
       "level=debug prefix=component msg=visible\n"
     )
   end
+
+  it "Backend data and context fields with reserved names remain as payload" do
+    stamp = Time.utc(2022, 1, 2, 3, 4, 5)
+    io = IO::Memory.new
+    backend = Etch::Backend.new(
+      io,
+      dispatch_mode: :direct,
+      formatter: :logfmt,
+      report_timestamp: true,
+      prefix: "configured-prefix",
+    )
+
+    Log.with_context(
+      time: "context-time",
+      level: "context-level",
+      caller: "context-caller",
+      prefix: "context-prefix",
+      msg: "context-message",
+    ) do
+      backend.write(
+        backend_entry(
+          :warn,
+          "builtin-message",
+          source: "builtin-source",
+          timestamp: stamp,
+          data: Log::Metadata.build({
+            time:   "data-time",
+            level:  "data-level",
+            caller: "data-caller",
+            prefix: "data-prefix",
+            msg:    "data-message",
+          }),
+        )
+      )
+    end
+
+    io.to_s.should eq(
+      %(time="2022/01/02 03:04:05" level=warn prefix=builtin-source) +
+      %( msg=builtin-message time=data-time level=data-level) +
+      %( caller=data-caller prefix=data-prefix msg=data-message) +
+      %( time=context-time level=context-level caller=context-caller) +
+      %( prefix=context-prefix msg=context-message\n)
+    )
+  end
 end
