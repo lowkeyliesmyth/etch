@@ -1,6 +1,6 @@
 require "./formatter"
 require "./logfmt_encoder"
-require "./value"
+require "./record"
 
 module Etch
   # Renders an encoded log record as a logfmt line.
@@ -10,21 +10,28 @@ module Etch
     def initialize(@time_format : String)
     end
 
-    # Renders *kvs* as one newline terminated logfmt record.
-    def render(kvs : Fields) : String
+    # Renders *record* as one newline terminated logfmt record.
+    def render(record : Record) : String
       String.build do |io|
         encoder = LogfmtEncoder.new(io)
-        kvs.each do |(key, value)|
-          encoder.encode(key, coerce(key, value))
+        record.each do |item|
+          case item
+          in Record::Timestamp
+            encoder.encode(TIMESTAMP_KEY, item.value.to_s(@time_format))
+          in Record::Severity
+            encoder.encode(LEVEL_KEY, item.value)
+          in Record::Caller
+            encoder.encode(CALLER_KEY, item.value)
+          in Record::Prefix
+            encoder.encode(PREFIX_KEY, item.value)
+          in Record::Message
+            encoder.encode(MESSAGE_KEY, item.value)
+          in Record::Payload
+            encoder.encode(item.key, item.value)
+          end
         end
         encoder.end_record
       end
-    end
-
-    # Runs only the record timestamp *key*-*value* pair through `time_format`, leaving other values unmodified.
-    private def coerce(key : String, value : Value) : Value
-      return value.to_s(@time_format) if key == TIMESTAMP_KEY && value.is_a?(Time)
-      value
     end
   end
 end
