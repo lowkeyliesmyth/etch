@@ -100,9 +100,11 @@ module Etch
       copy_with(prefix: prefix, fields: @fields.dup)
     end
 
-    # Emits a log event.
+    # Emits a log record comprised of *msg* and payload *fields* at *level*.
     #
-    # Optionally accepts *timestamp* from caller. Default nil *timestamp* vends an event write timestamp of now.
+    # An optional *timestamp* replaces the local system time. Default nil *timestamp* vends a record write timestamp of system local 'now'.
+    #
+    # Emitting at `Level::Fatal` does not trigger also raising a `FatalError`, only `#fatal` does.
     def emit(
       level : Level,
       msg,
