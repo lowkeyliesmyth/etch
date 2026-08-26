@@ -621,3 +621,74 @@ describe "reserved name payload fields" do
     )
   end
 end
+
+it "snapshots fields provided during initial construction" do
+  io = IO::Memory.new
+  # TODO: There is an accidentally inconsistent strict vs permissive Fields mutation API here.
+  #
+  # I should be able to write bare Array(Tuple(String, Etch::Value) without explicitly passing an i64 or using `.as(Etch::Value)` coercing. That behavior should be consistent between passing in the object at Logger construction and appending a tuple to an existing Fields object (see "snapshots fields provided during child instance construction" test below).
+  #
+  #
+  fields = [
+    {"batch", 1_i64.as(Etch::Value)},
+    {"batch", 2_i64.as(Etch::Value)},
+  ]
+  log = Etch::Logger.new(io, fields: fields)
+  fields << {"batch", 3_i64}
+  log.info "included"
+
+  io.to_s.should eq("INFO included batch=1 batch=2\n")
+end
+
+it "snapshots an empty field collection provided during construction" do
+  io = IO::Memory.new
+  fields = Etch::Fields.new
+  log = Etch::Logger.new(io, fields: fields)
+
+  fields << {"too late", true}
+  log.info "included"
+
+  io.to_s.should eq("INFO included\n")
+end
+
+it "snapshots fields provided during child instance construction" do
+  io = IO::Memory.new
+  parent = Etch::Logger.new(io)
+  fields = [
+    {"batch", 1},
+    {"batch", 2},
+  ]
+
+  child = parent.with(fields)
+  fields << {"batch", 3}
+
+  child.info "child"
+  parent.info "parent"
+
+  io.to_s.should eq(
+    "INFO child batch=1 batch=2\n" +
+    "INFO parent\n"
+  )
+end
+
+it "preserves field ordering across parent, child, and callsite" do
+  io = IO::Memory.new
+  parent_fields = [{"parent", 1_i64.as(Etch::Value)}]
+  child_fields = [{"child", 2_i64.as(Etch::Value)}]
+  parent = Etch::Logger.new(io, fields: parent_fields)
+  child = parent.with(child_fields)
+
+  parent_fields << {"late parent", 3_i64}
+  child_fields << {"late child", 4_i64}
+  child.info "ordered", call: 5
+
+  grandchild_fields = [{"grandchild", 6_i64}]
+  grandchild = child.with(grandchild_fields)
+
+  grandchild.info "more", call: 7
+
+  io.to_s.should eq(
+    "INFO ordered parent=1 child=2 call=5\n" +
+    "INFO more parent=1 child=2 grandchild=6 call=7\n"
+  )
+end

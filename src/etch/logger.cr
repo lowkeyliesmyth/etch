@@ -44,12 +44,13 @@ module Etch
       @report_caller : Bool = false,
       @caller_formatter : CallerFormatter? = nil,
       @formatter : Formatter = Formatter::Text,
-      @fields : Fields = Fields.new,
+      fields : Fields = Fields.new,
       @styles : Styles = Styles.default,
       @env : Foundation::Env = Foundation::LiveEnv.new,
       # Conditional so that children copies can reuse the same Sheen renderer
       renderer : Sheen::Renderer? = nil,
     )
+      @fields = fields.dup
       @mutex = Sync::Mutex.new
       @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
