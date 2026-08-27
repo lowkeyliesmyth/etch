@@ -2,6 +2,7 @@ require "./level"
 require "./formatter"
 require "./time"
 require "./value"
+require "./styles"
 
 module Etch
   # Applied to each log timestamp before formatting to allow customizing timestamp transformation.
@@ -23,17 +24,18 @@ module Etch
     "#{file}:#{line}"
   end
 
-  # Construction time config for a `Logger`. Every field is defaultable.
-  struct Options
-    property time_function : TimeFunction
-    property time_format : String
-    property level : Level
-    property prefix : String
-    property? report_timestamp : Bool
-    property? report_caller : Bool
-    property caller_formatter : CallerFormatter?
-    property fields : Fields
-    property formatter : Formatter
+  # Immutable options configuration for a `Logger`. Every field is defaultable but can only be set at construction time.
+  private struct Options
+    getter time_function : TimeFunction
+    getter time_format : String
+    getter level : Level
+    getter prefix : String
+    getter? report_timestamp : Bool
+    getter? report_caller : Bool
+    getter caller_formatter : CallerFormatter?
+    getter fields : Fields
+    getter formatter : Formatter
+    getter styles : Styles
 
     def initialize(
       @time_function : TimeFunction = ->(t : Time) { t },
@@ -45,7 +47,36 @@ module Etch
       @caller_formatter : CallerFormatter? = nil,
       @fields : Fields = Fields.new,
       @formatter : Formatter = Formatter::Text,
+      @styles : Styles = Styles.default,
     )
+    end
+
+    # Options snapshotter takes a point in time snapshot of the current Logger options fields, so children receive a duplicate instead of mutating the original.
+    def with(
+      *,
+      time_function : TimeFunction = @time_function,
+      time_format : String = @time_format,
+      level : Level = @level,
+      prefix : String = @prefix,
+      report_timestamp : Bool = @report_timestamp,
+      report_caller : Bool = @report_caller,
+      caller_formatter : CallerFormatter? = @caller_formatter,
+      fields : Fields = @fields,
+      formatter : Formatter = @formatter,
+      styles : Styles = @styles,
+    ) : self
+      self.class.new(
+        time_function: time_function,
+        time_format: time_format,
+        level: level,
+        prefix: prefix,
+        report_timestamp: report_timestamp,
+        report_caller: report_caller,
+        caller_formatter: caller_formatter,
+        fields: fields,
+        formatter: formatter,
+        styles: styles,
+      )
     end
   end
 end
