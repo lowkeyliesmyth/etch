@@ -11,7 +11,6 @@ describe Etch::Logger do
     log.report_caller?.should be_false
     log.caller_formatter.should be_nil
     log.prefix.should eq("")
-    log.fields.should be_empty
   end
 
   it "accepts symbol shorthand for enum options" do
@@ -270,10 +269,9 @@ describe Etch::Logger do
     it "preserves numeric and bool types without stringifying" do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
-      child = log.with(n: 42, f: 3.5, b: true, s: "x")
-      child.fields.should eq([
-        {"n", 42_i64}, {"f", 3.5}, {"b", true}, {"s", "x"},
-      ] of Tuple(String, Etch::Value))
+      log.with(n: 42, f: 3.5, b: true, s: "x").info "schwatevs"
+
+      io.to_s.should eq("INFO schwatevs n=42 f=3.5 b=true s=x\n")
     end
   end
 
@@ -284,16 +282,15 @@ describe Etch::Logger do
       child = log.with(batch: 2)
       child.info "derived"
       log.info "parent"
-      log.fields.should be_empty
       io.to_s.should eq("INFO derived batch=2\nINFO parent\n")
     end
 
     it "accumulates across chained calls and keeps duped keys" do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
-      log.with(a: 1).with(a: 2).fields.should eq([
-        {"a", 1_i64}, {"a", 2_i64},
-      ] of Tuple(String, Etch::Value))
+      log.with(a: 1).with(a: 2).info "chained"
+
+      io.to_s.should eq("INFO chained a=1 a=2\n")
     end
 
     it "renders accumulated fields before callsite fields" do
@@ -301,14 +298,6 @@ describe Etch::Logger do
       log = Etch::Logger.new(io)
       log.with(bound: 1).info "msg", call: 2
       io.to_s.should eq("INFO msg bound=1 call=2\n")
-    end
-
-    it "does modifies the child derived logger without mutating the parent's fields" do
-      io = IO::Memory.new
-      log = Etch::Logger.new(io, fields: [{"a", "1".as(Etch::Value)}])
-      child = log.with(b: 2)
-      child.fields << {"c", "3".as(Etch::Value)}
-      log.fields.should eq([{"a", "1"}] of Tuple(String, Etch::Value))
     end
   end
 
@@ -323,7 +312,9 @@ describe Etch::Logger do
     it "preserves accumulated fields" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, fields: [{"a", "1".as(Etch::Value)}])
-      log.with_prefix("new").fields.should eq([{"a", "1"}] of Tuple(String, Etch::Value))
+      log.with_prefix("new").info "derived"
+
+      io.to_s.should eq("INFO new: derived a=1\n")
     end
   end
 
@@ -354,8 +345,14 @@ describe Etch::Logger do
       io = IO::Memory.new
       parent = Etch::Logger.new(io)
       child = parent.with({"batch" => 2})
-      child.fields.should eq([{"batch", 2_i64}] of Tuple(String, Etch::Value))
-      parent.fields.should be_empty
+
+      child.info "child"
+      parent.info "parent"
+
+      io.to_s.should eq(
+        "INFO child batch=2\n" +
+        "INFO parent\n"
+      )
     end
 
     it "emits no fields when receiving an empty input collection" do

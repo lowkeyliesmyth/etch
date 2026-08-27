@@ -26,7 +26,6 @@ module Etch
     property caller_formatter : CallerFormatter?
     property? report_timestamp : Bool
     property? report_caller : Bool
-    property fields : Fields
     property styles : Styles
     getter env : Foundation::Env
     getter renderer : Sheen::Renderer
