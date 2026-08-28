@@ -316,6 +316,47 @@ describe Etch::Logger do
 
       io.to_s.should eq("INFO new: derived a=1\n")
     end
+
+    it "snapshots parent's semantic config for child creation" do
+      io = IO::Memory.new
+      first = Time.utc(2022, 1, 2, 3, 4, 5)
+      second = Time.utc(2022, 6, 7, 8, 9, 10)
+      caller_formatter = Etch::CallerFormatter.new do |file, line, _fn|
+        "#{file}:#{line}:before"
+      end
+
+      parent = Etch::Logger.new(
+        io,
+        level: :debug,
+        prefix: "before",
+        formatter: :logfmt,
+        report_timestamp: true,
+        time_format: Etch::TimeFormat::KITCHEN,
+        time_function: ->(_time : Time) { first },
+        report_caller: true,
+        caller_formatter: caller_formatter,
+        fields: [{"root", 0_i64.as(Etch::Value)}]
+      )
+
+      # No parent options modifications should be inherited by the child after this snapshot
+      child = parent.with(bound: 1)
+
+      parent.level = :error
+      parent.prefix = "after"
+      parent.formatter = :json
+      parent.time_format = "%Y"
+      parent.report_caller = false
+      parent.time_function = ->(_time : Time) { second }
+
+      child.debug "child", __file: "child.cr", __line: 42
+      parent.error "parent"
+
+      io.to_s.should eq(
+        "time=03:04AM level=debug caller=child.cr:42:before" +
+        " prefix=before msg=child root=0 bound=1\n" +
+        %({"time":"2022","level":"error","prefix":"after","msg":"parent","root":0}\n)
+      )
+    end
   end
 
   describe "runtime keyed fields" do
@@ -392,11 +433,29 @@ describe "styles" do
     log.styles.levels[Etch::Level::Info].value.should eq("INFO")
   end
 
-  it "gives a child logger styles it can self-modify without modifying the parent" do
-    parent = Etch::Logger.new(IO::Memory.new)
+  it "clones Styles when deriving a child from a parent" do
+    io = IO::Memory.new
+    styles = Etch::Styles.default
+    parent = Etch::Logger.new(io, styles: styles)
     child = parent.with(batch: 2)
-    child.styles.levels[Etch::Level::Error] = Sheen::Style.new.string("BOOM")
-    parent.styles.levels[Etch::Level::Error].value.should eq("ERROR")
+
+    styles.levels[Etch::Level::Info] = Sheen::Style.new.string("PARN")
+    child.styles.levels[Etch::Level::Info] = Sheen::Style.new.string("CHLD")
+
+    parent.info "parent"
+    child.info "child"
+
+    io.to_s.should eq(
+      "PARN parent\n" +
+      "CHLD child batch=2\n"
+    )
+  end
+
+  it "retains Styles provided at construction by identity" do
+    styles = Etch::Styles.default
+    logger = Etch::Logger.new(IO::Memory.new, styles: styles)
+
+    logger.styles.should be(styles)
   end
 end
 

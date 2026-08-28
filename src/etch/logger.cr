@@ -203,6 +203,7 @@ module Etch
     def with(**kv) : Logger
       options = @options
       copy_with(
+        options,
         prefix: options.prefix,
         fields: options.fields + to_fields(kv))
     end
@@ -216,15 +217,18 @@ module Etch
     def with(fields : Enumerable(Tuple(String, V))) : Logger forall V
       options = @options
       copy_with(
+        options,
         prefix: options.prefix,
         fields: options.fields + to_fields(fields))
     end
 
     # Makes an independent logger copy with *prefix* populated, sharing all other config properties state.
     def with_prefix(prefix : String) : Logger
+      options = @options
       copy_with(
+        options,
         prefix: prefix,
-        fields: @options.fields.dup)
+        fields: options.fields.dup)
     end
 
     # Emits a log record comprised of *msg* and payload *fields* at *level*.
@@ -394,8 +398,9 @@ module Etch
     end
 
     # Create a child Logger copy, explicitly setting the *prefix* and *fields* on the new child.
-    private def copy_with(prefix : String, fields : Fields) : Logger
-      options = @options
+    #
+    # Uses a snapshot of this logger's *options*.
+    private def copy_with(options : Options, prefix : String, fields : Fields) : Logger
       Logger.new(
         output: @output,
         level: options.level,
