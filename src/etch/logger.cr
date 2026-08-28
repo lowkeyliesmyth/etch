@@ -217,7 +217,7 @@ module Etch
       options = @options
       copy_with(
         prefix: options.prefix,
-        fields: @fields + to_fields(fields))
+        fields: options.fields + to_fields(fields))
     end
 
     # Makes an independent logger copy with *prefix* populated, sharing all other config properties state.
@@ -348,22 +348,23 @@ module Etch
 
     # Captures a semantic Record, renders it, and writes it out in a concurrency-safe way.
     private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
+      options = @options
       record = Record.new(
         level,
         msg,
-        @fields,
+        options.fields,
         call_fields,
         timestamp,
         file,
         line,
-        report_timestamp: @report_timestamp,
-        time_function: @time_function,
-        report_caller: @report_caller,
-        caller_formatter: @caller_formatter,
-        prefix: @prefix,
+        report_timestamp: options.report_timestamp?,
+        time_function: options.time_function,
+        report_caller: options.report_caller?,
+        caller_formatter: options.caller_formatter,
+        prefix: options.prefix,
       )
 
-      line_out = render(record)
+      line_out = render(record, options)
       @mutex.synchronize do
         @output << line_out
         @output.flush
@@ -372,11 +373,14 @@ module Etch
 
     # Renders *record* through the configured `#formatter`.
     #
-    private def render(record : Record) : String
-      case @formatter
-      in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(record)
-      in .json?   then JSONFormatter.new(@time_format).render(record)
-      in .logfmt? then LogfmtFormatter.new(@time_format).render(record)
+    private def render(record : Record, options : Options) : String
+      case options.formatter
+      in .text?
+        TextFormatter.new(options.styles, renderer, options.time_format).render(record)
+      in .json?
+        JSONFormatter.new(options.time_format).render(record)
+      in .logfmt?
+        LogfmtFormatter.new(options.time_format).render(record)
       end
     end
 
@@ -391,18 +395,19 @@ module Etch
 
     # Create a child Logger copy, explicitly setting the *prefix* and *fields* on the new child.
     private def copy_with(prefix : String, fields : Fields) : Logger
+      options = @options
       Logger.new(
         output: @output,
-        level: @level,
+        level: options.level,
         prefix: prefix,
-        time_format: @time_format,
-        time_function: @time_function,
-        report_timestamp: @report_timestamp,
-        report_caller: @report_caller,
-        caller_formatter: @caller_formatter,
-        formatter: @formatter,
+        time_format: options.time_format,
+        time_function: options.time_function,
+        report_timestamp: options.report_timestamp?,
+        report_caller: options.report_caller?,
+        caller_formatter: options.caller_formatter,
+        formatter: options.formatter,
         fields: fields,
-        styles: @styles.clone,
+        styles: options.styles.clone,
         env: @env,
         renderer: @renderer,
       )
