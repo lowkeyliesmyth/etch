@@ -74,8 +74,8 @@ module Etch
     end
 
     # Gets the current *report_timestamp* field item from the current Options.
-    def report_timestamp : Bool
-      @options.report_timestamp
+    def report_timestamp? : Bool
+      @options.report_timestamp?
     end
 
     # Sets whether or not to *report_timestamp*.
@@ -87,8 +87,8 @@ module Etch
     end
 
     # Gets the current *report_caller* field item from the current Options.
-    def report_caller : Bool
-      @options.report_caller
+    def report_caller? : Bool
+      @options.report_caller?
     end
 
     # Sets whether or not to *report_caller*.
