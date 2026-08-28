@@ -18,45 +18,164 @@ module Etch
   # Every level method captures the callsite through `__file` / `__line` default args.
   class Logger
     getter output : IO
-    property level : Level
-    property prefix : String
-    property time_format : String
-    property time_function : TimeFunction
-    property formatter : Formatter
-    property caller_formatter : CallerFormatter?
-    property? report_timestamp : Bool
-    property? report_caller : Bool
-    property styles : Styles
     getter env : Foundation::Env
     getter renderer : Sheen::Renderer
 
-    # Build a logger with configurations mirroring `Options`. *output* defaults to `STDERR`.
+    # Gets the minimum visible *level* field item from the current Options.
+    def level : Level
+      @options.level
+    end
+
+    # Sets the minimum visible *level*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def level=(level : Level) : Level
+      @options = @options.with(level: level)
+      level
+    end
+
+    # Gets the current *prefix* field item from the current Options.
+    def prefix : String
+      @options.prefix
+    end
+
+    # Sets the *prefix*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def prefix=(prefix : String) : String
+      @options = @options.with(prefix: prefix)
+      prefix
+    end
+
+    # Gets the current *time_format* field item from the current Options.
+    def time_format : String
+      @options.time_format
+    end
+
+    # Sets the *time_format*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def time_format=(time_format : String) : String
+      @options = @options.with(time_format: time_format)
+      time_format
+    end
+
+    # Gets the current *time_function* field item from the current Options.
+    def time_function : TimeFunction
+      @options.time_function
+    end
+
+    # Sets the *time_function*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def time_function=(time_function : TimeFunction) : TimeFunction
+      @options = @options.with(time_function: time_function)
+      time_function
+    end
+
+    # Gets the current *report_timestamp* field item from the current Options.
+    def report_timestamp : Bool
+      @options.report_timestamp
+    end
+
+    # Sets whether or not to *report_timestamp*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def report_timestamp=(report_timestamp : Bool) : Bool
+      @options = @options.with(report_timestamp: report_timestamp)
+      report_timestamp
+    end
+
+    # Gets the current *report_caller* field item from the current Options.
+    def report_caller : Bool
+      @options.report_caller
+    end
+
+    # Sets whether or not to *report_caller*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def report_caller=(report_caller : Bool) : Bool
+      @options = @options.with(report_caller: report_caller)
+      report_caller
+    end
+
+    # Gets the current *caller_formatter* field item from the current Options.
+    def caller_formatter : CallerFormatter?
+      @options.caller_formatter
+    end
+
+    # Sets the *caller_formatter*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def caller_formatter=(caller_formatter : CallerFormatter?) : CallerFormatter?
+      @options = @options.with(caller_formatter: caller_formatter)
+      caller_formatter
+    end
+
+    # Gets the current *formatter* field item from the current Options.
+    def formatter : Formatter
+      @options.formatter
+    end
+
+    # Sets the *formatter*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def formatter=(formatter : Formatter) : Formatter
+      @options = @options.with(formatter: formatter)
+      formatter
+    end
+
+    # Gets the current *styles* field item from the current Options.
+    def styles : Styles
+      @options.styles
+    end
+
+    # Sets the *styles*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def styles=(styles : Styles) : Styles
+      @options = @options.with(styles: styles)
+      styles
+    end
+
+    # Build a logger storing its config state in an instance of `Options`. *output* defaults to `STDERR`.
     #
     # Enum properties accept symbol shorthand. eg `level: :debug`
     def initialize(
       @output : IO = STDERR,
-      @level : Level = Level::Info,
-      @prefix : String = "",
-      @time_format : String = TimeFormat::DEFAULT,
-      @time_function : TimeFunction = ->(t : Time) { t },
-      @report_timestamp : Bool = false,
-      @report_caller : Bool = false,
-      @caller_formatter : CallerFormatter? = nil,
-      @formatter : Formatter = Formatter::Text,
+      level : Level = Level::Info,
+      prefix : String = "",
+      time_format : String = TimeFormat::DEFAULT,
+      time_function : TimeFunction = ->(t : Time) { t },
+      report_timestamp : Bool = false,
+      report_caller : Bool = false,
+      caller_formatter : CallerFormatter? = nil,
+      formatter : Formatter = Formatter::Text,
       fields : Fields = Fields.new,
-      @styles : Styles = Styles.default,
+      styles : Styles = Styles.default,
       @env : Foundation::Env = Foundation::LiveEnv.new,
-      # Conditional so that children copies can reuse the same Sheen renderer
+      # Optional so that children copies can reuse the same Sheen renderer
       renderer : Sheen::Renderer? = nil,
     )
-      @fields = fields.dup
+      @options = Options.new(
+        level: level,
+        prefix: prefix,
+        time_format: time_format,
+        time_function: time_function,
+        report_timestamp: report_timestamp,
+        report_caller: report_caller,
+        caller_formatter: caller_formatter,
+        formatter: formatter,
+        fields: fields.dup,
+        styles: styles,
+      )
       @mutex = Sync::Mutex.new
       @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
 
     # Whether or not a record at *level* would be emitted.
     def enabled?(level : Level) : Bool
-      level >= @level
+      level >= @options.level
     end
 
     # Redirects output to the provided *output* IO.

@@ -51,7 +51,7 @@ module Etch
     )
     end
 
-    # Options snapshotter takes a point in time snapshot of the current Logger options fields, so children receive a duplicate instead of mutating the original.
+    # Options snapshotter takes a point in time snapshot of the current Logger's Options fields, so children receive a duplicate instead of mutating the original.
     def with(
       *,
       time_function : TimeFunction = @time_function,
