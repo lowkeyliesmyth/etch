@@ -197,26 +197,34 @@ module Etch
       @renderer.color_profile = profile
     end
 
-    # Returns a new, unique logger instance carrying this logger's configuration along with the given *kv* key-value fields appended.
+    # Returns a new, unique logger instance holding this logger's configuration along with the given *kv* key-value fields appended.
     #
     # The original parent is not modified.
     def with(**kv) : Logger
-      copy_with(prefix: @prefix, fields: @fields + to_fields(kv))
+      options = @options
+      copy_with(
+        prefix: options.prefix,
+        fields: options.fields + to_fields(kv))
     end
 
-    # Returns a new, unique logger instance carrying this logger's configuration along with the provided *fields* appended.
+    # Returns a new, unique logger instance holding this logger's configuration along with the provided *fields* appended.
     #
     # Counterpart for `#with(**kv)` for keys not known at compile time. Accepts any enumerable of pairs, including a `Hash` and a `Fields` list.
     #
     # The original parent is not modified.
 
     def with(fields : Enumerable(Tuple(String, V))) : Logger forall V
-      copy_with(prefix: @prefix, fields: @fields + to_fields(fields))
+      options = @options
+      copy_with(
+        prefix: options.prefix,
+        fields: @fields + to_fields(fields))
     end
 
     # Makes an independent logger copy with *prefix* populated, sharing all other config properties state.
     def with_prefix(prefix : String) : Logger
-      copy_with(prefix: prefix, fields: @fields.dup)
+      copy_with(
+        prefix: prefix,
+        fields: @options.fields.dup)
     end
 
     # Emits a log record comprised of *msg* and payload *fields* at *level*.
