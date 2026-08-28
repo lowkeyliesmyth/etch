@@ -138,11 +138,12 @@ module Etch
       styles
     end
 
-    # Build a logger storing its config state in an instance of `Options`. *output* defaults to `STDERR`.
+    # Builds a logger bundling its semantic config into an `Options` snapshot. *output* defaults to `STDERR`.
     #
     # Enum properties accept symbol shorthand. eg `level: :debug`
+
     def initialize(
-      @output : IO = STDERR,
+      output : IO = STDERR,
       level : Level = Level::Info,
       prefix : String = "",
       time_format : String = TimeFormat::DEFAULT,
@@ -153,22 +154,37 @@ module Etch
       formatter : Formatter = Formatter::Text,
       fields : Fields = Fields.new,
       styles : Styles = Styles.default,
-      @env : Foundation::Env = Foundation::LiveEnv.new,
+      env : Foundation::Env = Foundation::LiveEnv.new,
       # Optional so that children copies can reuse the same Sheen renderer
       renderer : Sheen::Renderer? = nil,
     )
-      @options = Options.new(
-        level: level,
-        prefix: prefix,
-        time_format: time_format,
-        time_function: time_function,
-        report_timestamp: report_timestamp,
-        report_caller: report_caller,
-        caller_formatter: caller_formatter,
-        formatter: formatter,
-        fields: fields.dup,
-        styles: styles,
+      initialize(
+        output,
+        Options.new(
+          level: level,
+          prefix: prefix,
+          time_format: time_format,
+          time_function: time_function,
+          report_timestamp: report_timestamp,
+          report_caller: report_caller,
+          caller_formatter: caller_formatter,
+          formatter: formatter,
+          fields: fields,
+          styles: styles,
+        ),
+        env,
+        renderer,
       )
+    end
+
+    # Internal constructor that takes the `Options` snapshot containing semantic config from the public constructor and wires it up the necessary stateful runtime resources.
+    protected def initialize(
+      @output : IO,
+      options : Options,
+      @env : Foundation::Env,
+      renderer : Sheen::Renderer?,
+    )
+      @options = options.with(fields: options.fields.dup)
       @mutex = Sync::Mutex.new
       @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
@@ -401,18 +417,15 @@ module Etch
     #
     # Uses a snapshot of this logger's *options*.
     private def copy_with(options : Options, prefix : String, fields : Fields) : Logger
-      Logger.new(
-        output: @output,
-        level: options.level,
+      child_options = options.with(
         prefix: prefix,
-        time_format: options.time_format,
-        time_function: options.time_function,
-        report_timestamp: options.report_timestamp?,
-        report_caller: options.report_caller?,
-        caller_formatter: options.caller_formatter,
-        formatter: options.formatter,
         fields: fields,
-        styles: options.styles.clone,
+        styles: options.styles.clone
+      )
+
+      Logger.new(
+        @output,
+        child_options,
         env: @env,
         renderer: @renderer,
       )
