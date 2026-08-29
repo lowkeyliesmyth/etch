@@ -23,7 +23,7 @@ permissions:
   id-token: write
 
 env:
-  CRYSTAL_VERSION: "1.20.1"
+  CRYSTAL_VERSION: "1.21.0"
 
 jobs:
   docs:
