@@ -1,5 +1,5 @@
 name: etch
-version: 0.0.1
+version: 0.1.0
 
 description: |
   A minimal, leveled, structured, human-readable logger. Pretty. Little. Crystal Logs.
