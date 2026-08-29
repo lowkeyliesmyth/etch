@@ -11,7 +11,6 @@ describe Etch::Logger do
     log.report_caller?.should be_false
     log.caller_formatter.should be_nil
     log.prefix.should eq("")
-    log.fields.should be_empty
   end
 
   it "accepts symbol shorthand for enum options" do
@@ -270,10 +269,9 @@ describe Etch::Logger do
     it "preserves numeric and bool types without stringifying" do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
-      child = log.with(n: 42, f: 3.5, b: true, s: "x")
-      child.fields.should eq([
-        {"n", 42_i64}, {"f", 3.5}, {"b", true}, {"s", "x"},
-      ] of Tuple(String, Etch::Value))
+      log.with(n: 42, f: 3.5, b: true, s: "x").info "schwatevs"
+
+      io.to_s.should eq("INFO schwatevs n=42 f=3.5 b=true s=x\n")
     end
   end
 
@@ -284,16 +282,15 @@ describe Etch::Logger do
       child = log.with(batch: 2)
       child.info "derived"
       log.info "parent"
-      log.fields.should be_empty
       io.to_s.should eq("INFO derived batch=2\nINFO parent\n")
     end
 
     it "accumulates across chained calls and keeps duped keys" do
       io = IO::Memory.new
       log = Etch::Logger.new(io)
-      log.with(a: 1).with(a: 2).fields.should eq([
-        {"a", 1_i64}, {"a", 2_i64},
-      ] of Tuple(String, Etch::Value))
+      log.with(a: 1).with(a: 2).info "chained"
+
+      io.to_s.should eq("INFO chained a=1 a=2\n")
     end
 
     it "renders accumulated fields before callsite fields" do
@@ -301,14 +298,6 @@ describe Etch::Logger do
       log = Etch::Logger.new(io)
       log.with(bound: 1).info "msg", call: 2
       io.to_s.should eq("INFO msg bound=1 call=2\n")
-    end
-
-    it "does modifies the child derived logger without mutating the parent's fields" do
-      io = IO::Memory.new
-      log = Etch::Logger.new(io, fields: [{"a", "1".as(Etch::Value)}])
-      child = log.with(b: 2)
-      child.fields << {"c", "3".as(Etch::Value)}
-      log.fields.should eq([{"a", "1"}] of Tuple(String, Etch::Value))
     end
   end
 
@@ -323,7 +312,50 @@ describe Etch::Logger do
     it "preserves accumulated fields" do
       io = IO::Memory.new
       log = Etch::Logger.new(io, fields: [{"a", "1".as(Etch::Value)}])
-      log.with_prefix("new").fields.should eq([{"a", "1"}] of Tuple(String, Etch::Value))
+      log.with_prefix("new").info "derived"
+
+      io.to_s.should eq("INFO new: derived a=1\n")
+    end
+
+    it "snapshots parent's semantic config for child creation" do
+      io = IO::Memory.new
+      first = Time.utc(2022, 1, 2, 3, 4, 5)
+      second = Time.utc(2022, 6, 7, 8, 9, 10)
+      caller_formatter = Etch::CallerFormatter.new do |file, line, _fn|
+        "#{file}:#{line}:before"
+      end
+
+      parent = Etch::Logger.new(
+        io,
+        level: :debug,
+        prefix: "before",
+        formatter: :logfmt,
+        report_timestamp: true,
+        time_format: Etch::TimeFormat::KITCHEN,
+        time_function: ->(_time : Time) { first },
+        report_caller: true,
+        caller_formatter: caller_formatter,
+        fields: [{"root", 0_i64.as(Etch::Value)}]
+      )
+
+      # No parent options modifications should be inherited by the child after this snapshot
+      child = parent.with(bound: 1)
+
+      parent.level = :error
+      parent.prefix = "after"
+      parent.formatter = :json
+      parent.time_format = "%Y"
+      parent.report_caller = false
+      parent.time_function = ->(_time : Time) { second }
+
+      child.debug "child", __file: "child.cr", __line: 42
+      parent.error "parent"
+
+      io.to_s.should eq(
+        "time=03:04AM level=debug caller=child.cr:42:before" +
+        " prefix=before msg=child root=0 bound=1\n" +
+        %({"time":"2022","level":"error","prefix":"after","msg":"parent","root":0}\n)
+      )
     end
   end
 
@@ -354,8 +386,14 @@ describe Etch::Logger do
       io = IO::Memory.new
       parent = Etch::Logger.new(io)
       child = parent.with({"batch" => 2})
-      child.fields.should eq([{"batch", 2_i64}] of Tuple(String, Etch::Value))
-      parent.fields.should be_empty
+
+      child.info "child"
+      parent.info "parent"
+
+      io.to_s.should eq(
+        "INFO child batch=2\n" +
+        "INFO parent\n"
+      )
     end
 
     it "emits no fields when receiving an empty input collection" do
@@ -395,11 +433,29 @@ describe "styles" do
     log.styles.levels[Etch::Level::Info].value.should eq("INFO")
   end
 
-  it "gives a child logger styles it can self-modify without modifying the parent" do
-    parent = Etch::Logger.new(IO::Memory.new)
+  it "clones Styles when deriving a child from a parent" do
+    io = IO::Memory.new
+    styles = Etch::Styles.default
+    parent = Etch::Logger.new(io, styles: styles)
     child = parent.with(batch: 2)
-    child.styles.levels[Etch::Level::Error] = Sheen::Style.new.string("BOOM")
-    parent.styles.levels[Etch::Level::Error].value.should eq("ERROR")
+
+    styles.levels[Etch::Level::Info] = Sheen::Style.new.string("PARN")
+    child.styles.levels[Etch::Level::Info] = Sheen::Style.new.string("CHLD")
+
+    parent.info "parent"
+    child.info "child"
+
+    io.to_s.should eq(
+      "PARN parent\n" +
+      "CHLD child batch=2\n"
+    )
+  end
+
+  it "retains Styles provided at construction by identity" do
+    styles = Etch::Styles.default
+    logger = Etch::Logger.new(IO::Memory.new, styles: styles)
+
+    logger.styles.should be(styles)
   end
 end
 
@@ -620,4 +676,75 @@ describe "reserved name payload fields" do
       " msg=\"first message\" msg=\"second message\"\n"
     )
   end
+end
+
+it "snapshots fields provided during initial construction" do
+  io = IO::Memory.new
+  # TODO: There is an accidentally inconsistent strict vs permissive Fields mutation API here.
+  #
+  # I should be able to write bare Array(Tuple(String, Etch::Value) without explicitly passing an i64 or using `.as(Etch::Value)` coercing. That behavior should be consistent between passing in the object at Logger construction and appending a tuple to an existing Fields object (see "snapshots fields provided during child instance construction" test below).
+  #
+  #
+  fields = [
+    {"batch", 1_i64.as(Etch::Value)},
+    {"batch", 2_i64.as(Etch::Value)},
+  ]
+  log = Etch::Logger.new(io, fields: fields)
+  fields << {"batch", 3_i64}
+  log.info "included"
+
+  io.to_s.should eq("INFO included batch=1 batch=2\n")
+end
+
+it "snapshots an empty field collection provided during construction" do
+  io = IO::Memory.new
+  fields = Etch::Fields.new
+  log = Etch::Logger.new(io, fields: fields)
+
+  fields << {"too late", true}
+  log.info "included"
+
+  io.to_s.should eq("INFO included\n")
+end
+
+it "snapshots fields provided during child instance construction" do
+  io = IO::Memory.new
+  parent = Etch::Logger.new(io)
+  fields = [
+    {"batch", 1},
+    {"batch", 2},
+  ]
+
+  child = parent.with(fields)
+  fields << {"batch", 3}
+
+  child.info "child"
+  parent.info "parent"
+
+  io.to_s.should eq(
+    "INFO child batch=1 batch=2\n" +
+    "INFO parent\n"
+  )
+end
+
+it "preserves field ordering across parent, child, and callsite" do
+  io = IO::Memory.new
+  parent_fields = [{"parent", 1_i64.as(Etch::Value)}]
+  child_fields = [{"child", 2_i64.as(Etch::Value)}]
+  parent = Etch::Logger.new(io, fields: parent_fields)
+  child = parent.with(child_fields)
+
+  parent_fields << {"late parent", 3_i64}
+  child_fields << {"late child", 4_i64}
+  child.info "ordered", call: 5
+
+  grandchild_fields = [{"grandchild", 6_i64}]
+  grandchild = child.with(grandchild_fields)
+
+  grandchild.info "more", call: 7
+
+  io.to_s.should eq(
+    "INFO ordered parent=1 child=2 call=5\n" +
+    "INFO more parent=1 child=2 grandchild=6 call=7\n"
+  )
 end

@@ -18,45 +18,180 @@ module Etch
   # Every level method captures the callsite through `__file` / `__line` default args.
   class Logger
     getter output : IO
-    property level : Level
-    property prefix : String
-    property time_format : String
-    property time_function : TimeFunction
-    property formatter : Formatter
-    property caller_formatter : CallerFormatter?
-    property? report_timestamp : Bool
-    property? report_caller : Bool
-    property fields : Fields
-    property styles : Styles
     getter env : Foundation::Env
     getter renderer : Sheen::Renderer
 
-    # Build a logger with configurations mirroring `Options`. *output* defaults to `STDERR`.
+    # Gets the minimum visible *level* field item from the current Options.
+    def level : Level
+      @options.level
+    end
+
+    # Sets the minimum visible *level*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def level=(level : Level) : Level
+      @options = @options.with(level: level)
+      level
+    end
+
+    # Gets the current *prefix* field item from the current Options.
+    def prefix : String
+      @options.prefix
+    end
+
+    # Sets the *prefix*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def prefix=(prefix : String) : String
+      @options = @options.with(prefix: prefix)
+      prefix
+    end
+
+    # Gets the current *time_format* field item from the current Options.
+    def time_format : String
+      @options.time_format
+    end
+
+    # Sets the *time_format*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def time_format=(time_format : String) : String
+      @options = @options.with(time_format: time_format)
+      time_format
+    end
+
+    # Gets the current *time_function* field item from the current Options.
+    def time_function : TimeFunction
+      @options.time_function
+    end
+
+    # Sets the *time_function*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def time_function=(time_function : TimeFunction) : TimeFunction
+      @options = @options.with(time_function: time_function)
+      time_function
+    end
+
+    # Gets the current *report_timestamp* field item from the current Options.
+    def report_timestamp? : Bool
+      @options.report_timestamp?
+    end
+
+    # Sets whether or not to *report_timestamp*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def report_timestamp=(report_timestamp : Bool) : Bool
+      @options = @options.with(report_timestamp: report_timestamp)
+      report_timestamp
+    end
+
+    # Gets the current *report_caller* field item from the current Options.
+    def report_caller? : Bool
+      @options.report_caller?
+    end
+
+    # Sets whether or not to *report_caller*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def report_caller=(report_caller : Bool) : Bool
+      @options = @options.with(report_caller: report_caller)
+      report_caller
+    end
+
+    # Gets the current *caller_formatter* field item from the current Options.
+    def caller_formatter : CallerFormatter?
+      @options.caller_formatter
+    end
+
+    # Sets the *caller_formatter*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def caller_formatter=(caller_formatter : CallerFormatter?) : CallerFormatter?
+      @options = @options.with(caller_formatter: caller_formatter)
+      caller_formatter
+    end
+
+    # Gets the current *formatter* field item from the current Options.
+    def formatter : Formatter
+      @options.formatter
+    end
+
+    # Sets the *formatter*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def formatter=(formatter : Formatter) : Formatter
+      @options = @options.with(formatter: formatter)
+      formatter
+    end
+
+    # Gets the current *styles* field item from the current Options.
+    def styles : Styles
+      @options.styles
+    end
+
+    # Sets the *styles*.
+    #
+    # Creates a snapshot of the current Options fields with the updated field item instead of mutating in place.
+    def styles=(styles : Styles) : Styles
+      @options = @options.with(styles: styles)
+      styles
+    end
+
+    # Builds a logger bundling its semantic config into an `Options` snapshot. *output* defaults to `STDERR`.
     #
     # Enum properties accept symbol shorthand. eg `level: :debug`
+
     def initialize(
-      @output : IO = STDERR,
-      @level : Level = Level::Info,
-      @prefix : String = "",
-      @time_format : String = TimeFormat::DEFAULT,
-      @time_function : TimeFunction = ->(t : Time) { t },
-      @report_timestamp : Bool = false,
-      @report_caller : Bool = false,
-      @caller_formatter : CallerFormatter? = nil,
-      @formatter : Formatter = Formatter::Text,
-      @fields : Fields = Fields.new,
-      @styles : Styles = Styles.default,
-      @env : Foundation::Env = Foundation::LiveEnv.new,
-      # Conditional so that children copies can reuse the same Sheen renderer
+      output : IO = STDERR,
+      level : Level = Level::Info,
+      prefix : String = "",
+      time_format : String = TimeFormat::DEFAULT,
+      time_function : TimeFunction = ->(t : Time) { t },
+      report_timestamp : Bool = false,
+      report_caller : Bool = false,
+      caller_formatter : CallerFormatter? = nil,
+      formatter : Formatter = Formatter::Text,
+      fields : Fields = Fields.new,
+      styles : Styles = Styles.default,
+      env : Foundation::Env = Foundation::LiveEnv.new,
+      # Optional so that children copies can reuse the same Sheen renderer
       renderer : Sheen::Renderer? = nil,
     )
+      initialize(
+        output,
+        Options.new(
+          level: level,
+          prefix: prefix,
+          time_format: time_format,
+          time_function: time_function,
+          report_timestamp: report_timestamp,
+          report_caller: report_caller,
+          caller_formatter: caller_formatter,
+          formatter: formatter,
+          fields: fields,
+          styles: styles,
+        ),
+        env,
+        renderer,
+      )
+    end
+
+    # Internal constructor that takes the `Options` snapshot containing semantic config from the public constructor and wires it up the necessary stateful runtime resources.
+    protected def initialize(
+      @output : IO,
+      options : Options,
+      @env : Foundation::Env,
+      renderer : Sheen::Renderer?,
+    )
+      @options = options.with(fields: options.fields.dup)
       @mutex = Sync::Mutex.new
       @renderer = renderer || Sheen::Renderer.new(@output, env: @env)
     end
 
     # Whether or not a record at *level* would be emitted.
     def enabled?(level : Level) : Bool
-      level >= @level
+      level >= @options.level
     end
 
     # Redirects output to the provided *output* IO.
@@ -78,26 +213,38 @@ module Etch
       @renderer.color_profile = profile
     end
 
-    # Returns a new, unique logger instance carrying this logger's configuration along with the given *kv* key-value fields appended.
+    # Returns a new, unique logger instance holding this logger's configuration along with the given *kv* key-value fields appended.
     #
     # The original parent is not modified.
     def with(**kv) : Logger
-      copy_with(prefix: @prefix, fields: @fields + to_fields(kv))
+      options = @options
+      copy_with(
+        options,
+        prefix: options.prefix,
+        fields: options.fields + to_fields(kv))
     end
 
-    # Returns a new, unique logger instance carrying this logger's configuration along with the provided *fields* appended.
+    # Returns a new, unique logger instance holding this logger's configuration along with the provided *fields* appended.
     #
     # Counterpart for `#with(**kv)` for keys not known at compile time. Accepts any enumerable of pairs, including a `Hash` and a `Fields` list.
     #
     # The original parent is not modified.
 
     def with(fields : Enumerable(Tuple(String, V))) : Logger forall V
-      copy_with(prefix: @prefix, fields: @fields + to_fields(fields))
+      options = @options
+      copy_with(
+        options,
+        prefix: options.prefix,
+        fields: options.fields + to_fields(fields))
     end
 
     # Makes an independent logger copy with *prefix* populated, sharing all other config properties state.
     def with_prefix(prefix : String) : Logger
-      copy_with(prefix: prefix, fields: @fields.dup)
+      options = @options
+      copy_with(
+        options,
+        prefix: prefix,
+        fields: options.fields.dup)
     end
 
     # Emits a log record comprised of *msg* and payload *fields* at *level*.
@@ -221,22 +368,23 @@ module Etch
 
     # Captures a semantic Record, renders it, and writes it out in a concurrency-safe way.
     private def handle(level : Level, msg, call_fields : Fields, timestamp : Time?, file : String, line : Int32) : Nil
+      options = @options
       record = Record.new(
         level,
         msg,
-        @fields,
+        options.fields,
         call_fields,
         timestamp,
         file,
         line,
-        report_timestamp: @report_timestamp,
-        time_function: @time_function,
-        report_caller: @report_caller,
-        caller_formatter: @caller_formatter,
-        prefix: @prefix,
+        report_timestamp: options.report_timestamp?,
+        time_function: options.time_function,
+        report_caller: options.report_caller?,
+        caller_formatter: options.caller_formatter,
+        prefix: options.prefix,
       )
 
-      line_out = render(record)
+      line_out = render(record, options)
       @mutex.synchronize do
         @output << line_out
         @output.flush
@@ -245,11 +393,14 @@ module Etch
 
     # Renders *record* through the configured `#formatter`.
     #
-    private def render(record : Record) : String
-      case @formatter
-      in .text?   then TextFormatter.new(@styles, @renderer, @time_format).render(record)
-      in .json?   then JSONFormatter.new(@time_format).render(record)
-      in .logfmt? then LogfmtFormatter.new(@time_format).render(record)
+    private def render(record : Record, options : Options) : String
+      case options.formatter
+      in .text?
+        TextFormatter.new(options.styles, renderer, options.time_format).render(record)
+      in .json?
+        JSONFormatter.new(options.time_format).render(record)
+      in .logfmt?
+        LogfmtFormatter.new(options.time_format).render(record)
       end
     end
 
@@ -263,19 +414,18 @@ module Etch
     end
 
     # Create a child Logger copy, explicitly setting the *prefix* and *fields* on the new child.
-    private def copy_with(prefix : String, fields : Fields) : Logger
-      Logger.new(
-        output: @output,
-        level: @level,
+    #
+    # Uses a snapshot of this logger's *options*.
+    private def copy_with(options : Options, prefix : String, fields : Fields) : Logger
+      child_options = options.with(
         prefix: prefix,
-        time_format: @time_format,
-        time_function: @time_function,
-        report_timestamp: @report_timestamp,
-        report_caller: @report_caller,
-        caller_formatter: @caller_formatter,
-        formatter: @formatter,
         fields: fields,
-        styles: @styles.clone,
+        styles: options.styles.clone
+      )
+
+      Logger.new(
+        @output,
+        child_options,
         env: @env,
         renderer: @renderer,
       )
