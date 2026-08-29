@@ -239,7 +239,7 @@ describe Etch::Backend do
     )
   end
 
-  it "passess config setters through to the associated logger" do
+  it "respects changes to a stdlib logger's source level" do
     io = IO::Memory.new
     backend = Etch::Backend.new(
       io,
@@ -307,5 +307,88 @@ describe Etch::Backend do
       %( time=context-time level=context-level caller=context-caller) +
       %( prefix=context-prefix msg=context-message\n)
     )
+  end
+
+  it "renders shared semantic config equivalently to a direct logger" do
+    direct_io = IO::Memory.new
+    backend_io = IO::Memory.new
+    timestamp = Time.utc(2022, 1, 2, 3, 4)
+    time_function = ->(time : Time) { time + 1.hour }
+
+    styles = Etch::Styles.default
+    styles.levels[Etch::Level::Warn] =
+      Sheen::Style.new.string("NOTE")
+
+    bound_fields = [
+      {"root", 1_i64.as(Etch::Value)},
+    ]
+    call_fields = [
+      {"call", 2_i64.as(Etch::Value)},
+    ]
+
+    direct = Etch::Logger.new(
+      direct_io,
+      level: :debug,
+      prefix: "app",
+      time_format: Etch::TimeFormat::KITCHEN,
+      time_function: time_function,
+      report_timestamp: true,
+      fields: bound_fields,
+      styles: styles,
+    )
+
+    backend = Etch::Backend.new(
+      backend_io,
+      dispatch_mode: :direct,
+      level: :debug,
+      prefix: "app",
+      time_format: Etch::TimeFormat::KITCHEN,
+      time_function: time_function,
+      report_timestamp: true,
+      fields: bound_fields,
+      styles: styles,
+    )
+
+    direct.emit(
+      Etch::Level::Warn,
+      "same",
+      call_fields,
+      timestamp: timestamp,
+    )
+
+    backend.write(
+      backend_entry(
+        :warn,
+        "same",
+        data: Log::Metadata.build({call: 2}),
+        timestamp: timestamp
+      )
+    )
+
+    direct_io.to_s.should eq(
+      "04:04AM NOTE app: same root=1 call=2\n"
+    )
+    backend_io.to_s.should eq(direct_io.to_s)
+  end
+
+  it "applies config setters through its Logger" do
+    io = IO::Memory.new
+    backend = Etch::Backend.new(
+      io,
+      dispatch_mode: :direct,
+      level: :error,
+      formatter: :json,
+    )
+
+    styles = Etch::Styles.default
+    styles.levels[Etch::Level::Debug] =
+      Sheen::Style.new.string("BKND")
+
+    backend.level = :debug
+    backend.formatter = :text
+    backend.styles = styles
+
+    backend.write(backend_entry(:debug, "configured"))
+    io.to_s.should eq("BKND configured\n")
   end
 end

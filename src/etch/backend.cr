@@ -10,10 +10,10 @@ module Etch
   class Backend < ::Log::Backend
     @logger : Logger
 
-    # Builds a backend with the same config accepted by stdlib `Logger.new`.
+    # Builds a backend with the same semantic config accepted by `Etch::Logger.new`.
     #
     # *dispatch_mode* controls stdlib delivery and defaults to async mode.
-    # Note that *report_caller* must remain set to false and is rejected, because a `Log::Entry` doesn't have a valid line+file caller location.
+    # Note that *report_caller* must remain set to false (its default) and raises if set, because a `Log::Entry` doesn't have a valid line+file caller location.
     def initialize(
       output : IO = STDERR,
       *,
@@ -38,8 +38,8 @@ module Etch
       end
 
       super(dispatch_mode)
-      @logger = Logger.new(
-        output: output,
+
+      options = Options.new(
         level: level,
         prefix: prefix,
         time_format: time_format,
@@ -50,6 +50,11 @@ module Etch
         formatter: formatter,
         fields: fields,
         styles: styles,
+      )
+
+      @logger = Logger.new(
+        output,
+        options,
         env: env,
         renderer: renderer,
       )
