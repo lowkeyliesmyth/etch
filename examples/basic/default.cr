@@ -3,6 +3,7 @@ require "../examples"
 module Examples::Basic::Default
   # Demonstrates the simple case, a package-level logging through the current default logger.
   def self.run(io : IO) : Nil
+    Etch.info "Default before"
     Etch.with_logger(Etch::Logger.new(io)) do
       Etch.info "Hello world!"
       Etch.error "Oops!", err: "kitchen on fire"

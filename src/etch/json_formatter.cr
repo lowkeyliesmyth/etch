@@ -15,7 +15,7 @@ module Etch
     def initialize(@time_format : String)
     end
 
-    # Renders *record* as one newline terminted JSON object.
+    # Renders *record* as one newline terminated JSON object.
     #
     # Duped keys are preserved in order.
     def render(record : Record) : String

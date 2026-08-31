@@ -3,7 +3,7 @@ require "./options"
 require "./value"
 
 module Etch
-  # The immutable structural representation of a single logged occurrence, comprising all of underlying consituent Item fields.
+  # The immutable structural representation of a single logged occurrence, comprising all of underlying constituent Item fields.
   struct Record
     record Timestamp, value : Time
     record Severity, value : Level
@@ -21,7 +21,7 @@ module Etch
 
     # Captures one Record from logger config and payload fields. Bound payload fields always precede callsite payload fields.
     #
-    # Builtin entries are normalized and ommitted here if unset.
+    # Builtin entries are normalized and omitted here if unset.
     def initialize(
       level : Level,
       msg,

@@ -4,7 +4,7 @@ module Examples::Formatters::Trio
   # Renders the same structured record with each available public formatter.
   def self.run(io : IO) : Nil
     Etch::Formatter.values.each do |fmtr|
-      logger = Etch::Logger.new(io, formatter: fmtr)
+      logger = Etch::Logger.new(io, formatter: fmtr, report_timestamp: true)
       logger.info "Baking cookies", batch: 2
     end
   end

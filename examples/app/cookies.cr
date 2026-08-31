@@ -1,7 +1,7 @@
 require "../examples"
 
 module Examples::App::Cookies
-  # Logs oven startup while presering the helper caller's location.
+  # Logs oven startup while preserving the helper caller's location.
   def self.start_oven(
     temperature : Int32,
     __file : String = __FILE__,

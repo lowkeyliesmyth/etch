@@ -1,6 +1,6 @@
 # Etch Examples
 
-Reference consumers of Etch that double as end-to-end demonstrations. Run one and watch the ~spice~ logs flow.
+Reference consumers of Etch that double as end-to-end demonstrations. Run one and watch the ~~spice~~ logs flow.
 
 ## Running
 

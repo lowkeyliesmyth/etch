@@ -99,7 +99,7 @@ module Etch
     current_logger.logf(level, format, *args, __file: __file, __line: __line)
   end
 
-  # Returns an independent child of the current loggger with the given *kv* fields appended.
+  # Returns an independent child of the current logger with the given *kv* fields appended.
   def self.with(**kv) : Logger
     current_logger.with(**kv)
   end
