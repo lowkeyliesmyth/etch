@@ -10,12 +10,12 @@ Inspired by our friends at Charm who built [log](https://github.com/charmbracele
 
 ## Why etch?
 
-- **Small, ergonomic API.** Log through package-level methods or construct independent logger instances.
-- **Structured fields.** Attach typed key-value data at the call site or bind fields to reusable sub-loggers.
-- **Readable terminal output.** Text logs include styled levels, quoting, multiline values, timestamps, prefixes, and optional caller locations.
-- **Terminal-aware styles.** Etch renders through [sheen](https://github.com/lowkeyliesmyth/sheen), respecting terminal color capabilities and `NO_COLOR`.
-- **Three formatters.** Switch between styled text, JSON, and logfmt without changing logging calls.
-- **Crystal integration.** Use Etch directly or route Crystal's standard `Log` entries through `Etch::Backend`.
+- **Ergonomics, baby:** Log through package-level methods or construct independent logger instances.
+- **Structured fields:** Attach typed key-value data at the call site or bind fields to reusable sub-loggers.
+- **Readable terminal output:** Text logs include styled levels, quoting, multiline values, timestamps, prefixes, and optional caller locations.
+- **Terminal-aware styles:** Etch renders through [sheen](https://github.com/lowkeyliesmyth/sheen), respecting terminal color capabilities and `NO_COLOR`.
+- **Three formatters:** Styled text for humans, JSON and logfmt for machines. Switch between them easily without any fuss.
+- **Crystal stdlib utility integration:** Use Etch directly or route Crystal's standard `Log` entries through `Etch::Backend`.
 
 ## Installation
 
