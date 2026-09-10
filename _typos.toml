@@ -1,3 +1,6 @@
 [default.extend-words]
 # Intentionally truncated words
 ERRO = "ERRO"
+
+[files]
+extend-exclude = ["CHANGELOG.md"]
