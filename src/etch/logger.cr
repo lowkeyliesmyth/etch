@@ -208,7 +208,7 @@ module Etch
       @renderer.color_profile
     end
 
-    # Bypass autodetection and force the renderer to use the provided color *profile*.
+    # Bypass terminal profile autodetection and force the renderer to use the provided color *profile*.
     def color_profile=(profile : Foundation::Profile) : Foundation::Profile
       @renderer.color_profile = profile
     end
